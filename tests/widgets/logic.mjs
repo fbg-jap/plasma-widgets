@@ -2,7 +2,7 @@
 // top-level functions and vars are its API) and returns that API.
 import { readFileSync } from "node:fs"
 
-export const widgets = ["githubstatus", "githubaccount", "prtgstatus", "dockerstatus", "bugsinkstatus", "dokploystatus"]
+export const widgets = ["githubstatus", "githubaccount", "prtgstatus", "dockerstatus", "bugsinkstatus", "dokploystatus", "runnerstatus"]
 
 export function source(widget, file) {
     return readFileSync(new URL(`../../${widget}/contents/${file}`, import.meta.url), "utf8")

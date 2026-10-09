@@ -1,6 +1,6 @@
 # Plasma Widgets
 
-KDE Plasma 6 widgets for keeping an eye on GitHub, PRTG, Docker, Bugsink and Dokploy from the panel or desktop.
+KDE Plasma 6 widgets for keeping an eye on GitHub, PRTG, Docker, Bugsink, Dokploy and self-hosted GitHub Actions runners from the panel or desktop.
 
 **Not on KDE Plasma?** The [Status Badges tray app](tray/) brings the same badges to Windows, macOS and any Linux desktop with a system tray.
 
@@ -12,6 +12,7 @@ KDE Plasma 6 widgets for keeping an eye on GitHub, PRTG, Docker, Bugsink and Dok
 | [Docker Status](dockerstatus) | `dk.madebypless.dockerstatus` | Status badges for your containers (failed, unhealthy, restarting, paused, stopped, running), with start / stop / restart per container |
 | [Bugsink Status](bugsinkstatus) | `dk.madebypless.bugsinkstatus` | Status badges for your Bugsink issues (new, open, muted, resolved), with the open issues per project and resolve / mute buttons |
 | [Dokploy Status](dokploystatus) | `dk.madebypless.dokploystatus` | Status badges for your Dokploy applications, Compose stacks and databases (failed, deploying, deployed, idle), with deploy / start / stop buttons |
+| [Runner Status](runnerstatus) | `dk.madebypless.runnerstatus` | Status badges for self-hosted GitHub Actions runners (offline, busy, idle) from a runner dashboard's `/api/status`, with the running job and last result per runner |
 
 Every badge widget offers square or rounded badges, adjustable colours, a choice of which states get a badge, and an optional logo in front of the badges in the panel (any icon, or an image file such as a downloaded logo). Find these under **Appearance** and **General** in the widget's settings.
 
@@ -72,6 +73,12 @@ Deployments from a [Dokploy](https://dokploy.com/) server: badges for failed, de
 <img src="screenshots/dokploystatus-popup.png" width="468" alt="Dokploy Status popup: services grouped by project and environment with type and status, deploy and stop buttons, and a spinner on the one that is deploying">
 
 While something is deploying, the widget checks every few seconds so you see the result straight away, and it notifies you when a deployment fails.
+
+### Runner Status
+
+Self-hosted GitHub Actions runners, read from a runner dashboard's `/api/status` (set its address under **General**; it defaults to `http://192.168.1.217:8089`). The panel shows badges for offline, busy and idle runners. Click for every runner with its running job, last finished job and recent warnings, plus the host's load, uptime and free disk. Click a runner to open its job, or its repository's Actions page, on GitHub.
+
+The widget checks every 15 seconds by default and notifies you when a runner goes offline or a job fails. A runner the dashboard reports as anything other than idle or busy counts as offline.
 
 ## Install
 

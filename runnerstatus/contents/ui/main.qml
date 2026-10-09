@@ -1,0 +1,561 @@
+import QtQuick
+import QtQuick.Layouts
+import QtQuick.Shapes
+import org.kde.plasma.plasmoid
+import org.kde.plasma.core as PlasmaCore
+import org.kde.plasma.components as PlasmaComponents
+import org.kde.plasma.extras as PlasmaExtras
+import org.kde.kirigami as Kirigami
+import org.kde.notification
+import "../code/logic.js" as Logic
+
+PlasmoidItem {
+    id: root
+
+    readonly property string serverUrl: Plasmoid.configuration.serverUrl.trim().replace(/\/+$/, "")
+    readonly property string apiUrl: serverUrl + "/api/status"
+
+    // The dashboard's /api/status: {now, host: {hostname, os, load, cpus, uptime, disk_free_gb,
+    // disk_total_gb}, runners: [{dir, name, repo, repo_url, status, job, history, problems, …}]}.
+    property var host: null
+    property var runners: []
+    // The server's clock at the last check, so durations don't depend on this machine's clock.
+    property real serverNow: 0
+    // What Logic.changes() returned last time; null until the first check.
+    property var snapshot: null
+    property bool loaded: false
+    property date lastChecked
+    property string errorText: ""
+    property bool loading: false
+
+    // Runner states in panel order, worst first. Colours come from the Appearance settings and
+    // default to the dashboard's own; "glyph" is the square style's symbol, "roundGlyph" the rounded one's.
+    readonly property var runnerStates: [
+        { key: "offline", label: i18n("Offline"), glyph: "cross", roundGlyph: "cross", color: Plasmoid.configuration.colorOffline,
+          inPanel: Plasmoid.configuration.showOfflineInPanel },
+        { key: "busy", label: i18n("Busy"), glyph: "play", roundGlyph: "play", color: Plasmoid.configuration.colorBusy,
+          inPanel: Plasmoid.configuration.showBusyInPanel },
+        { key: "idle", label: i18n("Idle"), glyph: "check", roundGlyph: "check", color: Plasmoid.configuration.colorIdle,
+          inPanel: Plasmoid.configuration.showIdleInPanel },
+    ]
+    readonly property var stateCounts: Logic.countStates(runners)
+    readonly property var visibleStates: Logic.visibleStates(runnerStates, stateCounts)
+    // Badges (in the panel, the popup and on the desktop) show the states switched on in the
+    // settings, optionally including empty ones.
+    readonly property var panelStates: Logic.panelStates(runnerStates, stateCounts, Plasmoid.configuration.showZeroInPanel)
+    readonly property var sortedRunners: Logic.sortRunners(runners, runnerStates.map(st => st.key))
+    readonly property bool badgeMode: Plasmoid.configuration.badgeStyle !== "dot"
+
+    // The worst state of any runner, for the status dot.
+    readonly property string overallState: visibleStates.length > 0 ? visibleStates[0].key : "unknown"
+
+    readonly property string summary: {
+        if (!serverUrl) return i18n("Set the dashboard address in the settings")
+        if (!loaded) return i18n("Checking runners…")
+        if (runners.length === 0) return i18n("No runners found")
+        const offline = stateCounts.offline || 0
+        const busy = stateCounts.busy || 0
+        if (offline > 0) return i18np("%1 runner offline", "%1 runners offline", offline)
+        if (busy > 0) return i18np("%1 runner busy", "%1 runners busy", busy)
+        return i18np("%1 runner idle", "All %1 runners idle", runners.length)
+    }
+
+    // White or near-black, whichever reads better on the given background colour.
+    function contrastText(background) {
+        const c = Qt.color(background)
+        return 0.299 * c.r + 0.587 * c.g + 0.114 * c.b > 0.6 ? "#202020" : "white"
+    }
+
+    function stateColor(key) {
+        const st = runnerStates.find(st => st.key === key)
+        return st ? st.color : Kirigami.Theme.disabledTextColor
+    }
+
+    function stateLabel(key) {
+        const st = runnerStates.find(st => st.key === key)
+        return st ? st.label : key
+    }
+
+    function ago(time) {
+        return time ? i18n("%1 ago", Logic.formatDuration(serverNow - time)) : "–"
+    }
+
+    function refresh() {
+        if (!serverUrl || loading) {
+            return
+        }
+        loading = true
+        const xhr = new XMLHttpRequest()
+        xhr.onreadystatechange = () => {
+            if (xhr.readyState !== XMLHttpRequest.DONE) {
+                return
+            }
+            loading = false
+            lastChecked = new Date()
+            if (xhr.status !== 200) {
+                errorText = xhr.status ? i18n("HTTP error %1", xhr.status) : i18n("Can't reach %1", serverUrl)
+                return
+            }
+            try {
+                apply(JSON.parse(xhr.responseText))
+                errorText = ""
+            } catch (e) {
+                errorText = i18n("Could not read response: %1", e.message)
+            }
+        }
+        xhr.open("GET", apiUrl)
+        xhr.send()
+    }
+
+    function apply(data) {
+        const result = Logic.changes(data.runners, snapshot)
+        serverNow = data.now
+        host = data.host
+        runners = data.runners
+        snapshot = result.snapshot
+        loaded = true
+
+        if (result.wentOffline.length > 0 && Plasmoid.configuration.notifyOnOffline) {
+            notification.title = i18np("Runner offline", "%1 runners offline", result.wentOffline.length)
+            notification.text = result.wentOffline.map(r => Logic.title(r)).join("\n")
+            notification.sendEvent()
+        }
+        if (result.failedJobs.length > 0 && Plasmoid.configuration.notifyOnFailedJob) {
+            const f = result.failedJobs[0]
+            notification.title = result.failedJobs.length === 1
+                ? i18n("Job %1 failed", f.job.name)
+                : i18np("%1 job failed", "%1 jobs failed", result.failedJobs.length)
+            notification.text = result.failedJobs.slice(0, 4).map(f => f.job.name + " · " + Logic.title(f.runner)).join("\n")
+            notification.sendEvent()
+        }
+    }
+
+    onServerUrlChanged: {
+        loaded = false
+        runners = []
+        host = null
+        snapshot = null
+        errorText = ""
+        loading = false
+        refresh()
+    }
+
+    Plasmoid.icon: "run-build"
+    Plasmoid.status: (stateCounts.offline || 0) > 0
+        ? PlasmaCore.Types.NeedsAttentionStatus
+        : PlasmaCore.Types.ActiveStatus
+
+    toolTipMainText: i18n("Runner Status")
+    toolTipSubText: errorText || summary
+
+    switchWidth: Kirigami.Units.gridUnit * 12
+    switchHeight: Kirigami.Units.gridUnit * 12
+
+    Plasmoid.contextualActions: [
+        PlasmaCore.Action {
+            text: i18n("Refresh")
+            icon.name: "view-refresh"
+            onTriggered: root.refresh()
+        },
+        PlasmaCore.Action {
+            text: i18n("Open Dashboard")
+            icon.name: "internet-web-browser"
+            enabled: root.serverUrl !== ""
+            onTriggered: Qt.openUrlExternally(root.serverUrl)
+        }
+    ]
+
+    Notification {
+        id: notification
+        componentName: "plasma_workspace"
+        eventId: "notification"
+        iconName: "run-build"
+    }
+
+    Timer {
+        interval: Plasmoid.configuration.pollInterval * 1000
+        running: true
+        repeat: true
+        triggeredOnStart: true
+        onTriggered: root.refresh()
+    }
+
+    // Badge symbols as vector paths on a 100×100 grid, so they're exactly centred and sharp at any
+    // size (font glyphs like ▶ or ✕ sit off-centre). "stroke" paths are drawn as rounded lines,
+    // "fill" paths are filled.
+    readonly property var glyphPaths: ({
+        check: { stroke: "M 25 52 L 43 70 L 76 32" },
+        cross: { stroke: "M 30 30 L 70 70 M 70 30 L 30 70" },
+        play: { fill: "M 36 25 L 76 50 L 36 75 Z" },
+    })
+
+    // One badge symbol from glyphPaths, scaled to the item's size.
+    component Glyph: Item {
+        id: glyph
+        property string kind
+        property color color
+        readonly property var paths: root.glyphPaths[kind] || ({})
+
+        Shape {
+            width: 100
+            height: 100
+            scale: glyph.width / 100
+            transformOrigin: Item.TopLeft
+            preferredRendererType: Shape.CurveRenderer
+
+            ShapePath {
+                strokeColor: glyph.paths.stroke ? glyph.color : "transparent"
+                strokeWidth: 12
+                fillColor: "transparent"
+                capStyle: ShapePath.RoundCap
+                joinStyle: ShapePath.RoundJoin
+                PathSvg { path: glyph.paths.stroke || "M 0 0" }
+            }
+            ShapePath {
+                strokeColor: "transparent"
+                fillColor: glyph.paths.fill ? glyph.color : "transparent"
+                PathSvg { path: glyph.paths.fill || "M 0 0" }
+            }
+        }
+    }
+
+    // A status badge: the state's symbol on a block of its colour, then the count.
+    // Square or rounded (pill-shaped), as chosen under Appearance.
+    component StatusBadge: Rectangle {
+        property var badgeState
+        property int count
+        property real size
+        readonly property bool rounded: Plasmoid.configuration.badgeStyle === "rounded"
+
+        implicitHeight: size
+        implicitWidth: glyphBlock.width + countLabel.implicitWidth + size * (rounded ? 0.7 : 0.5)
+        radius: rounded ? height / 2 : 2
+        color: Plasmoid.configuration.colorCountBackground
+        border.width: rounded ? 1.5 : 1
+        border.color: badgeState.color
+
+        Rectangle {
+            id: glyphBlock
+            width: parent.size
+            height: parent.size
+            radius: parent.rounded ? width / 2 : 2
+            color: badgeState.color
+
+            Glyph {
+                anchors.centerIn: parent
+                width: parent.width * 0.7
+                height: width
+                kind: parent.parent.rounded ? badgeState.roundGlyph : badgeState.glyph
+                color: root.contrastText(badgeState.color)
+            }
+        }
+
+        PlasmaComponents.Label {
+            id: countLabel
+            anchors.left: glyphBlock.right
+            anchors.right: parent.right
+            anchors.verticalCenter: parent.verticalCenter
+            horizontalAlignment: Text.AlignHCenter
+            text: count
+            color: root.contrastText(Plasmoid.configuration.colorCountBackground)
+            font.pixelSize: parent.size * 0.6
+        }
+    }
+
+    // A row (or column, in a vertical panel) of status badges, optionally followed by "(of N)".
+    component BadgeBar: GridLayout {
+        id: bar
+        property real badgeSize
+        property bool vertical: false
+        property var badgeStates: root.visibleStates
+        property bool showTotal: false
+        property bool showLogo: false
+        readonly property int itemCount: badgeStates.length + (showTotal ? 1 : 0) + (showLogo ? 1 : 0)
+
+        flow: vertical ? GridLayout.TopToBottom : GridLayout.LeftToRight
+        rows: vertical ? Math.max(itemCount, 1) : 1
+        columns: vertical ? 1 : Math.max(itemCount, 1)
+        rowSpacing: Kirigami.Units.smallSpacing
+        columnSpacing: Kirigami.Units.smallSpacing
+
+        // Optional logo in front of the badges (panel only), chosen under Appearance.
+        Kirigami.Icon {
+            visible: bar.showLogo
+            Layout.preferredWidth: bar.badgeSize
+            Layout.preferredHeight: bar.badgeSize
+            source: Plasmoid.configuration.logoIcon || Plasmoid.icon
+        }
+
+        Repeater {
+            model: bar.badgeStates
+            StatusBadge {
+                required property var modelData
+                badgeState: modelData
+                count: root.stateCounts[modelData.key] || 0
+                size: bar.badgeSize
+            }
+        }
+
+        PlasmaComponents.Label {
+            visible: bar.showTotal
+            text: i18n("(of %1)", root.runners.length)
+            font.pixelSize: bar.badgeSize * 0.6
+        }
+    }
+
+    compactRepresentation: MouseArea {
+        id: compact
+
+        readonly property bool vertical: Plasmoid.formFactor === PlasmaCore.Types.Vertical
+        readonly property real badgeSize: Math.min(Kirigami.Units.iconSizes.smallMedium, vertical ? width : height)
+        readonly property bool showTotal: Plasmoid.configuration.showTotalInPanel
+        readonly property bool showBadges: root.badgeMode && root.runners.length > 0
+            && (root.panelStates.length > 0 || showTotal)
+
+        hoverEnabled: true
+        acceptedButtons: Qt.LeftButton | Qt.MiddleButton
+        onClicked: mouse => {
+            if (mouse.button === Qt.MiddleButton) {
+                root.refresh()
+            } else {
+                root.expanded = !root.expanded
+            }
+        }
+
+        Layout.minimumWidth: vertical ? 0 : (showBadges ? badges.implicitWidth : badgeSize)
+        Layout.minimumHeight: vertical ? (showBadges ? badges.implicitHeight : badgeSize) : 0
+
+        BadgeBar {
+            id: badges
+            anchors.centerIn: parent
+            visible: compact.showBadges
+            badgeStates: root.panelStates
+            showTotal: compact.showTotal
+            showLogo: Plasmoid.configuration.showLogo
+            vertical: compact.vertical
+            badgeSize: compact.badgeSize
+            opacity: root.errorText ? 0.5 : 1
+        }
+
+        // "Icon with status dot" style, and the fallback before the first check.
+        Item {
+            anchors.centerIn: parent
+            width: Math.min(parent.width, parent.height)
+            height: width
+            visible: !compact.showBadges
+
+            Kirigami.Icon {
+                anchors.fill: parent
+                source: Plasmoid.icon
+                active: compact.containsMouse
+            }
+
+            Rectangle {
+                width: Math.max(Kirigami.Units.smallSpacing * 2, parent.width * 0.35)
+                height: width
+                radius: width / 2
+                anchors.right: parent.right
+                anchors.bottom: parent.bottom
+                color: root.errorText ? root.stateColor("unknown") : root.stateColor(root.overallState)
+                border.width: 1
+                border.color: Kirigami.Theme.backgroundColor
+            }
+        }
+    }
+
+    fullRepresentation: PlasmaExtras.Representation {
+        Layout.minimumWidth: Kirigami.Units.gridUnit * 18
+        Layout.minimumHeight: Kirigami.Units.gridUnit * 14
+        Layout.preferredWidth: Kirigami.Units.gridUnit * 24
+        Layout.preferredHeight: Kirigami.Units.gridUnit * 24
+
+        collapseMarginsHint: true
+
+        header: PlasmaExtras.PlasmoidHeading {
+            RowLayout {
+                anchors.fill: parent
+                spacing: Kirigami.Units.smallSpacing
+
+                Rectangle {
+                    Layout.preferredWidth: Kirigami.Units.iconSizes.small
+                    Layout.preferredHeight: width
+                    radius: width / 2
+                    color: root.errorText ? root.stateColor("unknown") : root.stateColor(root.overallState)
+                }
+
+                PlasmaExtras.Heading {
+                    Layout.fillWidth: true
+                    level: 3
+                    text: root.summary
+                    elide: Text.ElideRight
+                }
+
+                PlasmaComponents.ToolButton {
+                    icon.name: "internet-web-browser"
+                    display: PlasmaComponents.AbstractButton.IconOnly
+                    text: i18n("Open Dashboard")
+                    enabled: root.serverUrl !== ""
+                    onClicked: Qt.openUrlExternally(root.serverUrl)
+                    PlasmaComponents.ToolTip.text: text
+                    PlasmaComponents.ToolTip.visible: hovered
+                }
+
+                PlasmaComponents.ToolButton {
+                    icon.name: "view-refresh"
+                    display: PlasmaComponents.AbstractButton.IconOnly
+                    text: i18n("Refresh")
+                    enabled: !root.loading && root.serverUrl !== ""
+                    onClicked: root.refresh()
+                    PlasmaComponents.ToolTip.text: text
+                    PlasmaComponents.ToolTip.visible: hovered
+                }
+            }
+        }
+
+        footer: ColumnLayout {
+            spacing: 0
+
+            BadgeBar {
+                Layout.margins: Kirigami.Units.smallSpacing
+                Layout.bottomMargin: 0
+                visible: root.badgeMode && root.runners.length > 0
+                badgeSize: Kirigami.Units.iconSizes.small * 1.25
+                badgeStates: root.panelStates
+                showTotal: Plasmoid.configuration.showTotalInPanel
+            }
+
+            // The machine the runners live on.
+            PlasmaComponents.Label {
+                Layout.fillWidth: true
+                Layout.leftMargin: Kirigami.Units.smallSpacing
+                Layout.rightMargin: Kirigami.Units.smallSpacing
+                Layout.topMargin: Kirigami.Units.smallSpacing
+                visible: root.host !== null
+                opacity: 0.7
+                font: Kirigami.Theme.smallFont
+                elide: Text.ElideRight
+                text: root.host
+                    ? i18n("%1 · load %2 · up %3 · %4 of %5 GB free", root.host.hostname, (root.host.load || []).join(" / "),
+                        Logic.formatDuration(root.host.uptime), root.host.disk_free_gb, root.host.disk_total_gb)
+                    : ""
+            }
+
+            PlasmaComponents.Label {
+                Layout.fillWidth: true
+                Layout.margins: Kirigami.Units.smallSpacing
+                opacity: 0.7
+                font: Kirigami.Theme.smallFont
+                elide: Text.ElideRight
+                color: root.errorText ? Kirigami.Theme.negativeTextColor : Kirigami.Theme.textColor
+                text: root.errorText
+                    ? root.errorText
+                    : (isNaN(root.lastChecked) ? "" : i18n("Last checked %1", root.lastChecked.toLocaleTimeString(Qt.locale(), Locale.ShortFormat)))
+            }
+        }
+
+        PlasmaComponents.ScrollView {
+            id: scroll
+            anchors.fill: parent
+            // Long titles are elided instead of making the list scroll sideways.
+            contentWidth: availableWidth
+            // Never scroll sideways. An as-needed horizontal bar would also toggle with the vertical one,
+            // which changes availableWidth: a binding loop on its "visible".
+            PlasmaComponents.ScrollBar.horizontal.policy: PlasmaComponents.ScrollBar.AlwaysOff
+
+            ColumnLayout {
+                width: scroll.availableWidth
+                spacing: Kirigami.Units.smallSpacing
+
+                Repeater {
+                    id: runnerRepeater
+                    model: root.sortedRunners
+
+                    PlasmaComponents.ItemDelegate {
+                        id: runnerItem
+                        required property var modelData
+                        readonly property string runnerState: Logic.runnerState(modelData)
+                        readonly property var job: modelData.job
+                        readonly property var last: Logic.lastJob(modelData)
+                        readonly property int problemCount: (modelData.problems || []).length
+
+                        Layout.fillWidth: true
+                        onClicked: Qt.openUrlExternally(Logic.actionsUrl(modelData))
+                        PlasmaComponents.ToolTip.text: Logic.actionsUrl(modelData)
+                        PlasmaComponents.ToolTip.visible: hovered && PlasmaComponents.ToolTip.text !== ""
+
+                        contentItem: ColumnLayout {
+                            spacing: 0
+
+                            RowLayout {
+                                Layout.fillWidth: true
+                                spacing: Kirigami.Units.smallSpacing
+
+                                Rectangle {
+                                    Layout.preferredWidth: Kirigami.Units.smallSpacing * 2
+                                    Layout.preferredHeight: width
+                                    radius: width / 2
+                                    color: root.stateColor(runnerItem.runnerState)
+                                }
+                                PlasmaComponents.Label {
+                                    Layout.fillWidth: true
+                                    text: Logic.title(runnerItem.modelData)
+                                    font.bold: true
+                                    elide: Text.ElideRight
+                                }
+                                PlasmaComponents.Label {
+                                    text: root.stateLabel(runnerItem.runnerState)
+                                    color: root.stateColor(runnerItem.runnerState)
+                                }
+                            }
+
+                            // The running job.
+                            PlasmaComponents.Label {
+                                Layout.fillWidth: true
+                                visible: !!runnerItem.job
+                                elide: Text.ElideRight
+                                text: runnerItem.job
+                                    ? i18n("%1 in %2 · running %3", runnerItem.job.job || i18n("job"), runnerItem.job.workflow || i18n("workflow"),
+                                        Logic.formatDuration(root.serverNow - runnerItem.job.started))
+                                    : ""
+                            }
+
+                            // The last finished job.
+                            PlasmaComponents.Label {
+                                Layout.fillWidth: true
+                                visible: !!runnerItem.last
+                                elide: Text.ElideRight
+                                font: Kirigami.Theme.smallFont
+                                color: Logic.jobFailed(runnerItem.last) ? root.stateColor("offline") : Kirigami.Theme.textColor
+                                opacity: Logic.jobFailed(runnerItem.last) ? 1 : 0.7
+                                text: runnerItem.last
+                                    ? i18n("Last: %1 %2 · %3", runnerItem.last.name, runnerItem.last.result, root.ago(runnerItem.last.finished))
+                                    : ""
+                            }
+
+                            PlasmaComponents.Label {
+                                Layout.fillWidth: true
+                                elide: Text.ElideRight
+                                font: Kirigami.Theme.smallFont
+                                opacity: 0.7
+                                text: [
+                                    runnerItem.modelData.name,
+                                    runnerItem.modelData.version ? "v" + runnerItem.modelData.version : "",
+                                    runnerItem.runnerState !== "offline" ? i18n("up %1", Logic.formatDuration(runnerItem.modelData.uptime)) : "",
+                                    runnerItem.problemCount > 0 ? i18np("%1 recent warning", "%1 recent warnings", runnerItem.problemCount) : "",
+                                ].filter(s => s).join(" · ")
+                            }
+                        }
+                    }
+                }
+
+                PlasmaExtras.PlaceholderMessage {
+                    Layout.fillWidth: true
+                    Layout.topMargin: Kirigami.Units.gridUnit * 2
+                    visible: runnerRepeater.count === 0
+                    iconName: root.errorText ? "network-disconnect" : root.loading ? "view-refresh" : "run-build"
+                    text: root.errorText ? root.errorText : root.summary
+                }
+            }
+        }
+    }
+}

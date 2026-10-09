@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<kcfg xmlns="http://www.kde.org/standards/kcfg/1.0"
+      xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+      xsi:schemaLocation="http://www.kde.org/standards/kcfg/1.0 http://www.kde.org/standards/kcfg/1.0/kcfg.xsd">
+  <kcfgfile name=""/>
+  <group name="General">
+    <entry name="serverUrl" type="String">
+      <label>Address of the runner dashboard (its /api/status is read)</label>
+      <default>http://192.168.1.217:8089</default>
+    </entry>
+    <entry name="pollInterval" type="Int">
+      <label>Seconds between status checks</label>
+      <default>15</default>
+      <min>5</min>
+      <max>600</max>
+    </entry>
+    <entry name="notifyOnOffline" type="Bool">
+      <label>Send a notification when a runner goes offline</label>
+      <default>true</default>
+    </entry>
+    <entry name="notifyOnFailedJob" type="Bool">
+      <label>Send a notification when a job fails</label>
+      <default>true</default>
+    </entry>
+    <entry name="showOfflineInPanel" type="Bool">
+      <label>Show the offline badge</label>
+      <default>true</default>
+    </entry>
+    <entry name="showBusyInPanel" type="Bool">
+      <label>Show the busy badge</label>
+      <default>true</default>
+    </entry>
+    <entry name="showIdleInPanel" type="Bool">
+      <label>Show the idle badge</label>
+      <default>true</default>
+    </entry>
+    <entry name="showZeroInPanel" type="Bool">
+      <label>Show badges for states with no runners</label>
+      <default>false</default>
+    </entry>
+    <entry name="showTotalInPanel" type="Bool">
+      <label>Show the total number of runners after the badges</label>
+      <default>false</default>
+    </entry>
+  </group>
+  <group name="Appearance">
+    <entry name="showLogo" type="Bool">
+      <label>Show a logo in front of the badges in the panel</label>
+      <default>false</default>
+    </entry>
+    <entry name="logoIcon" type="String">
+      <label>Icon name or image file for the logo; empty means the widget's own icon</label>
+      <default></default>
+    </entry>
+    <entry name="badgeStyle" type="String">
+      <label>Panel style: square badges, rounded badges, or an icon with a status dot</label>
+      <default>square</default>
+    </entry>
+    <entry name="colorOffline" type="Color">
+      <label>offline colour</label>
+      <default>#cf222e</default>
+    </entry>
+    <entry name="colorBusy" type="Color">
+      <label>busy colour</label>
+      <default>#bf8700</default>
+    </entry>
+    <entry name="colorIdle" type="Color">
+      <label>idle colour</label>
+      <default>#1a7f37</default>
+    </entry>
+    <entry name="colorCountBackground" type="Color">
+      <label>Count background badge colour</label>
+      <default>#2b2f33</default>
+    </entry>
+  </group>
+</kcfg>
