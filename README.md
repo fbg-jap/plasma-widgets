@@ -4,10 +4,10 @@ KDE Plasma 6 widgets for keeping an eye on GitHub and PRTG from the panel or des
 
 | Widget | Id | Shows |
 |---|---|---|
-| [GitHub Status](githubstatus) | `local.githubstatus` | GitHub's service health from githubstatus.com, with active incidents |
-| [GitHub Account](githubaccount) | `local.githubaccount` | Your notifications, review requests, open PRs with CI state, and CI on recently pushed repos |
-| [GitHub Counts](githubcounts) | `local.githubcounts` | Just three numbers in the panel: open PRs, review requests, failing CI |
-| [PRTG Status](prtgstatus) | `local.prtgstatus` | Down / warning / unusual sensors from a PRTG Network Monitor server |
+| [GitHub Status](githubstatus) | `dk.madebypless.githubstatus` | GitHub's service health from githubstatus.com, with active incidents |
+| [GitHub Account](githubaccount) | `dk.madebypless.githubaccount` | Your notifications, review requests, open PRs with CI state, and CI on recently pushed repos |
+| [GitHub Counts](githubcounts) | `dk.madebypless.githubcounts` | Just three numbers in the panel: open PRs, review requests, failing CI |
+| [PRTG Status](prtgstatus) | `dk.madebypless.prtgstatus` | Down / warning / unusual sensors from a PRTG Network Monitor server |
 
 ## Screenshots
 
@@ -88,7 +88,7 @@ The key is passed to `curl` on stdin, so it never shows up in the process list.
 Preview a widget in its own window:
 
 ```sh
-plasmawindowed local.githubstatus
+plasmawindowed dk.madebypless.githubstatus
 ```
 
 `plasmoidviewer` from the `plasma-sdk` package is handy for testing panel and desktop layouts. QML errors from `plasmawindowed` go to the journal (`journalctl --user -f`).

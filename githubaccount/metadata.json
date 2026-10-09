@@ -8,7 +8,7 @@
         "Category": "Online Services",
         "Description": "Your GitHub notifications, review requests, pull requests and CI status via the gh CLI",
         "Icon": "vcs-branch",
-        "Id": "local.githubaccount",
+        "Id": "dk.madebypless.githubaccount",
         "License": "GPL-2.0-or-later",
         "Name": "GitHub Account",
         "Version": "1.0",

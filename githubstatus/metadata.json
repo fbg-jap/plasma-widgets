@@ -8,7 +8,7 @@
         "Category": "Online Services",
         "Description": "Shows the current status of GitHub services from githubstatus.com",
         "Icon": "vcs-branch",
-        "Id": "local.githubstatus",
+        "Id": "dk.madebypless.githubstatus",
         "License": "GPL-2.0-or-later",
         "Name": "GitHub Status",
         "Version": "1.0",
