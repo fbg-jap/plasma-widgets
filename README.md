@@ -9,6 +9,40 @@ KDE Plasma 6 widgets for keeping an eye on GitHub and PRTG from the panel or des
 | [GitHub Counts](githubcounts) | `local.githubcounts` | Just three numbers in the panel: open PRs, review requests, failing CI |
 | [PRTG Status](prtgstatus) | `local.prtgstatus` | Down / warning / unusual sensors from a PRTG Network Monitor server |
 
+## Screenshots
+
+The screenshots show sample data, apart from GitHub Status, which shows the live public feed.
+
+### GitHub Status
+
+In the panel, a coloured dot shows the overall status. Click it for the per-component view:
+
+<img src="screenshots/githubstatus-panel.png" width="66" alt="GitHub Status in the panel: branch icon with a green dot">
+
+<img src="screenshots/githubstatus-popup.png" width="360" alt="GitHub Status popup: All Systems Operational, with every component listed as operational">
+
+### GitHub Account
+
+The badge counts unread notifications plus review requests:
+
+<img src="screenshots/githubaccount-panel.png" width="66" alt="GitHub Account in the panel: branch icon with a badge showing 5">
+
+<img src="screenshots/githubaccount-popup.png" width="432" alt="GitHub Account popup: review requests, notifications with unread ones in bold, and open pull requests with green, red, orange and grey check dots">
+
+### GitHub Counts
+
+Open PRs, review requests, and failing CI, shown directly in the panel:
+
+<img src="screenshots/githubcounts-panel.png" width="161" alt="GitHub Counts: 4 open pull requests, 2 review requests, 2 failing CI items in red">
+
+### PRTG Status
+
+A pill appears in the panel for each problem category (down, warning, unusual):
+
+<img src="screenshots/prtgstatus-panel.png" width="89" alt="PRTG Status in the panel: red pill 1, yellow pill 2, orange pill 1">
+
+<img src="screenshots/prtgstatus-popup.png" width="432" alt="PRTG Status popup: sensors grouped under Down, Warning and Unusual with device, sensor, last value and message">
+
 ## Install
 
 ```sh
