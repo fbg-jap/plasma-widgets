@@ -9,7 +9,7 @@ A cross-platform tray app for Windows, macOS and Linux with the same status badg
 
 ## Download
 
-Get the file for your system from the [latest tray release](https://github.com/pless84/plasma-widgets/releases?q=tray-v), unpack it and run **StatusBadges** (`StatusBadges.exe` on Windows, `StatusBadges.app` on macOS).
+Get the file for your system from the [latest tray release](https://github.com/pless84/plasma-widgets/releases?q=tray), unpack it and run **StatusBadges** (`StatusBadges.exe` on Windows, `StatusBadges.app` on macOS).
 
 The app isn't code-signed. The first time, Windows SmartScreen may ask you to confirm (**More info → Run anyway**). On macOS, right-click the app and choose **Open**.
 
