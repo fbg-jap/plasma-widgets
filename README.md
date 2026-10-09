@@ -72,16 +72,18 @@ To update after pulling changes, use `-u` instead of `-i`. A widget already on t
 ## PRTG setup
 
 1. In PRTG, create a **read-only** API key: Setup → Account Settings → API Keys.
-2. Enter the server address (e.g. `https://prtg.example.com`) in the widget's settings.
-3. Copy the key and store it in your keyring. The address must match the settings field exactly, without a trailing `/`:
+2. Open the widget's settings and enter the server address, e.g. `https://prtg.example.com`.
+3. Paste the key into the **API key** field and click **Save to Keyring**. The page confirms when a key is stored for that server.
 
-   ```sh
-   wl-paste -n | secret-tool store --label="PRTG API key" service plasma-prtg server https://prtg.example.com
-   ```
+The key goes into your system keyring, never into the widget's settings file, and it's linked to the server address. Use `https`: over `http` the key is sent unencrypted, and the settings page warns you about that.
 
-   Or run the command without `wl-paste -n |` and paste the key at the `Password:` prompt. Don't put the key in `--label`.
+When the widget checks PRTG, the key is passed to `curl` on stdin, so it never shows up in the process list. Saving is the one exception: for a moment, while the key is being saved, it is part of a shell's command line.
 
-The key is passed to `curl` on stdin, so it never shows up in the process list.
+You can also store the key from a terminal. The address must match the settings field exactly, without a trailing `/`:
+
+```sh
+wl-paste -n | secret-tool store --label="PRTG API key" service plasma-prtg server https://prtg.example.com
+```
 
 ## Development
 

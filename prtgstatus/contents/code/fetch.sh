@@ -1,7 +1,8 @@
 #!/bin/sh
 # Prints PRTG's sensor table (JSON) for every sensor that is not Up or paused.
 # Usage: fetch.sh <server-url>
-# The API key is read from the keyring, stored with:
+# The API key is read from the keyring. The widget's settings page saves it there,
+# or it can be stored by hand with:
 #   secret-tool store --label="PRTG API key" service plasma-prtg server <server-url>
 # It is handed to curl on stdin so it never appears in the process list.
 set -e
