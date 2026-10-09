@@ -268,13 +268,22 @@ PlasmoidItem {
         property bool vertical: false
         property var badgeStates: root.visibleStates
         property bool showTotal: false
-        readonly property int itemCount: badgeStates.length + (showTotal ? 1 : 0)
+        property bool showLogo: false
+        readonly property int itemCount: badgeStates.length + (showTotal ? 1 : 0) + (showLogo ? 1 : 0)
 
         flow: vertical ? GridLayout.TopToBottom : GridLayout.LeftToRight
         rows: vertical ? Math.max(itemCount, 1) : 1
         columns: vertical ? 1 : Math.max(itemCount, 1)
         rowSpacing: Kirigami.Units.smallSpacing
         columnSpacing: Kirigami.Units.smallSpacing
+
+        // Optional logo in front of the badges (panel only), chosen under Appearance.
+        Kirigami.Icon {
+            visible: bar.showLogo
+            Layout.preferredWidth: bar.badgeSize
+            Layout.preferredHeight: bar.badgeSize
+            source: Plasmoid.configuration.logoIcon || Plasmoid.icon
+        }
 
         Repeater {
             model: bar.badgeStates
@@ -321,6 +330,7 @@ PlasmoidItem {
             visible: compact.showBadges
             badgeStates: root.panelStates
             showTotal: compact.showTotal
+            showLogo: Plasmoid.configuration.showLogo
             vertical: compact.vertical
             badgeSize: compact.badgeSize
             opacity: root.errorText ? 0.5 : 1

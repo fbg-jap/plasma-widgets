@@ -4,12 +4,25 @@ import QtQuick.Layouts
 import org.kde.kirigami as Kirigami
 import org.kde.kcmutils as KCM
 import org.kde.kquickcontrols as KQuickControls
+import org.kde.iconthemes as KIconThemes
 
 KCM.SimpleKCM {
     id: page
 
     property string cfg_badgeStyle
     property string cfg_badgeStyleDefault
+    property bool cfg_showLogo
+    property bool cfg_showLogoDefault
+    property string cfg_logoIcon
+    property string cfg_logoIconDefault
+
+    // The widget's own icon, used as the logo until another one is chosen.
+    readonly property string defaultLogo: "network-server"
+
+    property QtObject logoDialog: KIconThemes.IconDialog {
+        title: i18n("Choose a Logo")
+        onIconNameChanged: if (iconName) page.cfg_logoIcon = iconName
+    }
     property color cfg_colorDown
     property color cfg_colorDownDefault
     property color cfg_colorAcknowledged
@@ -45,6 +58,35 @@ KCM.SimpleKCM {
             model: [i18n("Square"), i18n("Rounded")]
             currentIndex: page.cfg_badgeStyle === "rounded" ? 1 : 0
             onActivated: index => page.cfg_badgeStyle = index === 1 ? "rounded" : "square"
+        }
+
+        QQC2.CheckBox {
+            Kirigami.FormData.label: i18n("Logo:")
+            text: i18n("Show a logo in front of the badges in the panel")
+            checked: page.cfg_showLogo
+            onToggled: page.cfg_showLogo = checked
+        }
+
+        RowLayout {
+            enabled: page.cfg_showLogo
+
+            QQC2.Button {
+                icon.name: page.cfg_logoIcon || page.defaultLogo
+                text: i18n("Choose…")
+                onClicked: page.logoDialog.open()
+                QQC2.ToolTip.text: i18n("Pick an icon, or an image file such as a downloaded logo")
+                QQC2.ToolTip.visible: hovered
+            }
+
+            QQC2.ToolButton {
+                icon.name: "edit-reset"
+                display: QQC2.AbstractButton.IconOnly
+                text: i18n("Use the widget's own icon")
+                enabled: page.cfg_logoIcon !== ""
+                onClicked: page.cfg_logoIcon = ""
+                QQC2.ToolTip.text: text
+                QQC2.ToolTip.visible: hovered
+            }
         }
 
         Item {

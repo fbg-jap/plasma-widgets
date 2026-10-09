@@ -56,6 +56,14 @@
     </entry>
   </group>
   <group name="Appearance">
+    <entry name="showLogo" type="Bool">
+      <label>Show a logo in front of the badges in the panel</label>
+      <default>false</default>
+    </entry>
+    <entry name="logoIcon" type="String">
+      <label>Icon name or image file for the logo; empty means the widget's own icon</label>
+      <default></default>
+    </entry>
     <entry name="badgeStyle" type="String">
       <label>Badge style: square or rounded</label>
       <default>square</default>
