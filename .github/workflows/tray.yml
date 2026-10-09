@@ -49,6 +49,8 @@ jobs:
         run: |
           mkdir -p ../smoke
           echo '{"widgets": [{"id": "s1", "kind": "githubstatus", "name": "GitHub Status", "interval": 300}]}' > ../smoke/config.json
+          # The offscreen platform has no font database on Windows; point it at the system fonts.
+          if [ "$RUNNER_OS" = "Windows" ]; then export QT_QPA_FONTDIR="C:/Windows/Fonts"; fi
           case "$RUNNER_OS" in
             Windows) BIN=dist/StatusBadges/StatusBadges.exe ;;
             macOS)   BIN=dist/StatusBadges.app/Contents/MacOS/StatusBadges ;;
