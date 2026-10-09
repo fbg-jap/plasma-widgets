@@ -1,0 +1,78 @@
+import QtQuick
+import QtQuick.Controls as QQC2
+import QtQuick.Layouts
+import org.kde.kirigami as Kirigami
+import org.kde.kcmutils as KCM
+import org.kde.kquickcontrols as KQuickControls
+
+KCM.SimpleKCM {
+    id: page
+
+    property color cfg_colorDown
+    property color cfg_colorDownDefault
+    property color cfg_colorAcknowledged
+    property color cfg_colorAcknowledgedDefault
+    property color cfg_colorWarning
+    property color cfg_colorWarningDefault
+    property color cfg_colorUnusual
+    property color cfg_colorUnusualDefault
+    property color cfg_colorPaused
+    property color cfg_colorPausedDefault
+    property color cfg_colorUp
+    property color cfg_colorUpDefault
+    property color cfg_colorUnknown
+    property color cfg_colorUnknownDefault
+    property color cfg_colorCountBackground
+    property color cfg_colorCountBackgroundDefault
+
+    // One row per colour setting: the config key (without "cfg_") and its label.
+    readonly property var colorSettings: [
+        { key: "colorDown", label: i18n("Down:") },
+        { key: "colorAcknowledged", label: i18n("Down (acknowledged):") },
+        { key: "colorWarning", label: i18n("Warning:") },
+        { key: "colorUnusual", label: i18n("Unusual:") },
+        { key: "colorPaused", label: i18n("Paused:") },
+        { key: "colorUp", label: i18n("Up:") },
+        { key: "colorUnknown", label: i18n("Unknown:") },
+        { key: "colorCountBackground", label: i18n("Count background:") }
+    ]
+
+    Kirigami.FormLayout {
+        Repeater {
+            model: page.colorSettings
+
+            RowLayout {
+                required property var modelData
+                readonly property string key: "cfg_" + modelData.key
+                readonly property bool isDefault: Qt.colorEqual(page[key], page[key + "Default"])
+
+                Kirigami.FormData.label: modelData.label
+
+                KQuickControls.ColorButton {
+                    color: page[key]
+                    dialogTitle: modelData.label
+                    showAlphaChannel: false
+                    onAccepted: picked => page[key] = picked
+                }
+
+                QQC2.ToolButton {
+                    icon.name: "edit-reset"
+                    display: QQC2.AbstractButton.IconOnly
+                    text: i18n("Reset to default")
+                    enabled: !isDefault
+                    onClicked: page[key] = page[key + "Default"]
+                    QQC2.ToolTip.text: text
+                    QQC2.ToolTip.visible: hovered
+                }
+            }
+        }
+
+        QQC2.Label {
+            Layout.fillWidth: true
+            wrapMode: Text.WordWrap
+            font: Kirigami.Theme.smallFont
+            opacity: 0.7
+            text: i18n("The symbol and number on each badge switch between white and dark text to stay readable on the colour you pick.")
+        }
+    }
+}

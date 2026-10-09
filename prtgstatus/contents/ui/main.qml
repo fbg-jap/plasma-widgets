@@ -30,22 +30,28 @@ PlasmoidItem {
 
     readonly property bool allGood: loaded && down.length === 0 && warning.length === 0 && unusual.length === 0
 
-    // PRTG's sensor states in the order its status bar shows them, with PRTG's colours
-    // so the badges look like the PRTG web interface.
+    // PRTG's sensor states in the order its status bar shows them. The colours come from the
+    // Appearance settings, which default to PRTG's own so the badges match its web interface.
     readonly property var sensorStates: [
-        { key: "down", label: i18n("Down"), glyph: "↓", color: "#d71920", glyphColor: "white", codes: [5, 14] },
-        { key: "acknowledged", label: i18n("Down (acknowledged)"), glyph: "✓", color: "#e77579", glyphColor: "white", codes: [13] },
-        { key: "warning", label: i18n("Warning"), glyph: "!", color: "#ffcb05", glyphColor: "#202020", codes: [4] },
-        { key: "unusual", label: i18n("Unusual"), glyph: "~", color: "#ff9800", glyphColor: "white", codes: [10] },
-        { key: "paused", label: i18n("Paused"), glyph: "❚❚", color: "#2a72d6", glyphColor: "white", codes: [7, 8, 9, 11, 12] },
-        { key: "up", label: i18n("Up"), glyph: "✓", color: "#7ba700", glyphColor: "white", codes: [3] },
-        { key: "unknown", label: i18n("Unknown"), glyph: "?", color: "#8a8a8a", glyphColor: "white", codes: [1, 2, 6] },
+        { key: "down", label: i18n("Down"), glyph: "↓", color: Plasmoid.configuration.colorDown, codes: [5, 14] },
+        { key: "acknowledged", label: i18n("Down (acknowledged)"), glyph: "✓", color: Plasmoid.configuration.colorAcknowledged, codes: [13] },
+        { key: "warning", label: i18n("Warning"), glyph: "!", color: Plasmoid.configuration.colorWarning, codes: [4] },
+        { key: "unusual", label: i18n("Unusual"), glyph: "~", color: Plasmoid.configuration.colorUnusual, codes: [10] },
+        { key: "paused", label: i18n("Paused"), glyph: "❚❚", color: Plasmoid.configuration.colorPaused, codes: [7, 8, 9, 11, 12] },
+        { key: "up", label: i18n("Up"), glyph: "✓", color: Plasmoid.configuration.colorUp, codes: [3] },
+        { key: "unknown", label: i18n("Unknown"), glyph: "?", color: Plasmoid.configuration.colorUnknown, codes: [1, 2, 6] },
     ]
     readonly property var visibleStates: sensorStates.filter(st => (stateCounts[st.key] || 0) > 0)
     // The panel can leave out paused sensors; the popup always shows every state.
     readonly property var panelStates: Plasmoid.configuration.showPausedInPanel
         ? visibleStates
         : visibleStates.filter(st => st.key !== "paused")
+
+    // White or near-black, whichever reads better on the given background colour.
+    function contrastText(background) {
+        const c = Qt.color(background)
+        return 0.299 * c.r + 0.587 * c.g + 0.114 * c.b > 0.6 ? "#202020" : "white"
+    }
 
     function stateColor(key) {
         return sensorStates.find(st => st.key === key).color
@@ -206,7 +212,7 @@ PlasmoidItem {
         implicitHeight: size
         implicitWidth: glyphBlock.width + countLabel.implicitWidth + size * 0.5
         radius: 2
-        color: "#2b2f33"
+        color: Plasmoid.configuration.colorCountBackground
         border.width: 1
         border.color: sensorState.color
 
@@ -220,7 +226,7 @@ PlasmoidItem {
             PlasmaComponents.Label {
                 anchors.centerIn: parent
                 text: sensorState.glyph
-                color: sensorState.glyphColor
+                color: root.contrastText(sensorState.color)
                 font.bold: true
                 font.pixelSize: parent.height * 0.6
             }
@@ -233,7 +239,7 @@ PlasmoidItem {
             anchors.verticalCenter: parent.verticalCenter
             horizontalAlignment: Text.AlignHCenter
             text: count
-            color: "white"
+            color: root.contrastText(Plasmoid.configuration.colorCountBackground)
             font.pixelSize: parent.size * 0.6
         }
     }

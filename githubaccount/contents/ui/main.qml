@@ -36,31 +36,39 @@ PlasmoidItem {
     readonly property int ciRunning: ciStates.filter(st => st === "PENDING" || st === "EXPECTED").length
     readonly property int ciPassing: ciStates.filter(st => st === "SUCCESS").length
 
-    // GitHub's own colours, so the badges and dots look like github.com.
-    readonly property color blueColor: "#0969da"
-    readonly property color greenColor: "#1a7f37"
-    readonly property color redColor: "#cf222e"
-    readonly property color yellowColor: "#bf8700"
-    readonly property color greyColor: "#6e7781"
+    // Badge and dot colours from the Appearance settings; they default to GitHub's own colours.
+    readonly property color reviewsColor: Plasmoid.configuration.colorReviews
+    readonly property color notificationsColor: Plasmoid.configuration.colorNotifications
+    readonly property color pullRequestsColor: Plasmoid.configuration.colorPullRequests
+    readonly property color ciFailingColor: Plasmoid.configuration.colorCiFailing
+    readonly property color ciRunningColor: Plasmoid.configuration.colorCiRunning
+    readonly property color ciPassingColor: Plasmoid.configuration.colorCiPassing
+
+    // White or near-black, whichever reads better on the given background colour.
+    function contrastText(background) {
+        const c = Qt.color(background)
+        return 0.299 * c.r + 0.587 * c.g + 0.114 * c.b > 0.6 ? "#202020" : "white"
+    }
+
 
     // The badges shown in the panel and the popup, PRTG-status-bar style; zero counts are hidden.
     readonly property var countBadges: [
-        { label: i18n("review requests"), icon: "view-visible-symbolic", color: blueColor, count: reviewCount },
-        { label: i18n("unread notifications"), icon: "notifications-symbolic", color: greyColor, count: unreadNotifications.length },
-        { label: i18n("open pull requests"), icon: "vcs-merge-request-symbolic", color: greenColor, count: prCount },
-        { label: i18n("CI failing"), icon: "dialog-cancel-symbolic", color: redColor, count: ciFailing },
-        { label: i18n("CI running"), icon: "chronometer-symbolic", color: yellowColor, count: ciRunning },
-        { label: i18n("CI passing"), icon: "checkmark-symbolic", color: greenColor, count: ciPassing },
+        { label: i18n("review requests"), icon: "view-visible-symbolic", color: reviewsColor, count: reviewCount },
+        { label: i18n("unread notifications"), icon: "notifications-symbolic", color: notificationsColor, count: unreadNotifications.length },
+        { label: i18n("open pull requests"), icon: "vcs-merge-request-symbolic", color: pullRequestsColor, count: prCount },
+        { label: i18n("CI failing"), icon: "dialog-cancel-symbolic", color: ciFailingColor, count: ciFailing },
+        { label: i18n("CI running"), icon: "chronometer-symbolic", color: ciRunningColor, count: ciRunning },
+        { label: i18n("CI passing"), icon: "checkmark-symbolic", color: ciPassingColor, count: ciPassing },
     ]
     readonly property var visibleBadges: countBadges.filter(b => b.count > 0)
 
     function ciColor(state) {
         switch (state) {
-        case "SUCCESS": return greenColor
+        case "SUCCESS": return ciPassingColor
         case "FAILURE":
-        case "ERROR": return redColor
+        case "ERROR": return ciFailingColor
         case "PENDING":
-        case "EXPECTED": return yellowColor
+        case "EXPECTED": return ciRunningColor
         default: return Kirigami.Theme.disabledTextColor
         }
     }
@@ -246,7 +254,7 @@ PlasmoidItem {
         implicitHeight: size
         implicitWidth: iconBlock.width + countLabel.implicitWidth + size * 0.5
         radius: 2
-        color: "#2b2f33"
+        color: Plasmoid.configuration.colorCountBackground
         border.width: 1
         border.color: badge.color
 
@@ -263,7 +271,7 @@ PlasmoidItem {
                 height: width
                 source: badge.icon
                 isMask: true
-                color: "white"
+                color: root.contrastText(badge.color)
             }
         }
 
@@ -274,7 +282,7 @@ PlasmoidItem {
             anchors.verticalCenter: parent.verticalCenter
             horizontalAlignment: Text.AlignHCenter
             text: badge.count
-            color: "white"
+            color: root.contrastText(Plasmoid.configuration.colorCountBackground)
             font.pixelSize: parent.size * 0.6
         }
     }
@@ -493,7 +501,7 @@ PlasmoidItem {
                         subtitle: i18n("%1 #%2 by %3", modelData.repository.nameWithOwner, modelData.number,
                                        modelData.author ? modelData.author.login : i18n("unknown"))
                         url: modelData.url
-                        dotColor: Kirigami.Theme.highlightColor
+                        dotColor: root.reviewsColor
                         bold: true
                     }
                 }

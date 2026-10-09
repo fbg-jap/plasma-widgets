@@ -23,4 +23,38 @@
       <default>true</default>
     </entry>
   </group>
+  <group name="Appearance">
+    <entry name="colorDown" type="Color">
+      <label>Down badge colour</label>
+      <default>#d71920</default>
+    </entry>
+    <entry name="colorAcknowledged" type="Color">
+      <label>Down (acknowledged) badge colour</label>
+      <default>#e77579</default>
+    </entry>
+    <entry name="colorWarning" type="Color">
+      <label>Warning badge colour</label>
+      <default>#ffcb05</default>
+    </entry>
+    <entry name="colorUnusual" type="Color">
+      <label>Unusual badge colour</label>
+      <default>#ff9800</default>
+    </entry>
+    <entry name="colorPaused" type="Color">
+      <label>Paused badge colour</label>
+      <default>#2a72d6</default>
+    </entry>
+    <entry name="colorUp" type="Color">
+      <label>Up badge colour</label>
+      <default>#7ba700</default>
+    </entry>
+    <entry name="colorUnknown" type="Color">
+      <label>Unknown badge colour</label>
+      <default>#8a8a8a</default>
+    </entry>
+    <entry name="colorCountBackground" type="Color">
+      <label>Count background badge colour</label>
+      <default>#2b2f33</default>
+    </entry>
+  </group>
 </kcfg>

@@ -23,4 +23,34 @@
       <default>true</default>
     </entry>
   </group>
+  <group name="Appearance">
+    <entry name="colorReviews" type="Color">
+      <label>Review requests badge colour</label>
+      <default>#0969da</default>
+    </entry>
+    <entry name="colorNotifications" type="Color">
+      <label>Unread notifications badge colour</label>
+      <default>#6e7781</default>
+    </entry>
+    <entry name="colorPullRequests" type="Color">
+      <label>Open pull requests badge colour</label>
+      <default>#1a7f37</default>
+    </entry>
+    <entry name="colorCiFailing" type="Color">
+      <label>CI failing badge colour</label>
+      <default>#cf222e</default>
+    </entry>
+    <entry name="colorCiRunning" type="Color">
+      <label>CI running badge colour</label>
+      <default>#bf8700</default>
+    </entry>
+    <entry name="colorCiPassing" type="Color">
+      <label>CI passing badge colour</label>
+      <default>#1a7f37</default>
+    </entry>
+    <entry name="colorCountBackground" type="Color">
+      <label>Count background badge colour</label>
+      <default>#2b2f33</default>
+    </entry>
+  </group>
 </kcfg>
