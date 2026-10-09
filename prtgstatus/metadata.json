@@ -1,0 +1,18 @@
+{
+    "KPlugin": {
+        "Authors": [
+            {
+                "Name": "jap"
+            }
+        ],
+        "Category": "System Information",
+        "Description": "Down, warning and unusual sensors from a PRTG Network Monitor server",
+        "Icon": "network-server",
+        "Id": "local.prtgstatus",
+        "License": "GPL-2.0-or-later",
+        "Name": "PRTG Status",
+        "Version": "1.0"
+    },
+    "KPackageStructure": "Plasma/Applet",
+    "X-Plasma-API-Minimum-Version": "6.0"
+}

@@ -1,0 +1,19 @@
+{
+    "KPlugin": {
+        "Authors": [
+            {
+                "Name": "jap"
+            }
+        ],
+        "Category": "Online Services",
+        "Description": "Counts of your open GitHub pull requests, pending reviews and failing CI, via the gh CLI",
+        "Icon": "vcs-merge-request",
+        "Id": "local.githubcounts",
+        "License": "GPL-2.0-or-later",
+        "Name": "GitHub Counts",
+        "Version": "1.0",
+        "Website": "https://github.com/pulls"
+    },
+    "KPackageStructure": "Plasma/Applet",
+    "X-Plasma-API-Minimum-Version": "6.0"
+}

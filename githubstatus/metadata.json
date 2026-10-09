@@ -1,0 +1,19 @@
+{
+    "KPlugin": {
+        "Authors": [
+            {
+                "Name": "jap"
+            }
+        ],
+        "Category": "Online Services",
+        "Description": "Shows the current status of GitHub services from githubstatus.com",
+        "Icon": "vcs-branch",
+        "Id": "local.githubstatus",
+        "License": "GPL-2.0-or-later",
+        "Name": "GitHub Status",
+        "Version": "1.0",
+        "Website": "https://www.githubstatus.com"
+    },
+    "KPackageStructure": "Plasma/Applet",
+    "X-Plasma-API-Minimum-Version": "6.0"
+}
