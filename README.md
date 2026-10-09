@@ -22,7 +22,7 @@ In the panel, a coloured dot shows the overall status. Click it for the per-comp
 
 ### GitHub Account
 
-The panel shows count badges for review requests, unread notifications, open pull requests, and CI failing / running / passing. Badges with a zero count are hidden, and every colour can be changed under **Appearance** in the widget's settings. Click for the full lists:
+The panel shows count badges for review requests, unread notifications, open pull requests, and CI failing / running / passing. Badges with a zero count are hidden, and the badge style (square or rounded) and every colour can be changed under **Appearance** in the widget's settings. Click for the full lists:
 
 <img src="screenshots/githubaccount-panel.png" width="303" alt="GitHub Account in the panel: badges for 2 review requests, 3 unread notifications, 4 open pull requests, 2 CI failing, 2 CI running and 2 CI passing">
 
@@ -30,7 +30,7 @@ The panel shows count badges for review requests, unread notifications, open pul
 
 ### PRTG Status
 
-The panel shows a badge per sensor state, like PRTG's own status bar. The colours default to PRTG's and can be changed under **Appearance** in the widget's settings, and the paused badge can be hidden from the panel. Click for the problem sensors:
+The panel shows a badge per sensor state, like PRTG's own status bar. Under **Appearance** in the widget's settings you can switch to a rounded style like PRTG's newer interface and change every colour. In the General settings you can pick which states appear in the panel, show states with no sensors, and add the total (e.g. "(of 919)"). Click for the problem sensors:
 
 <img src="screenshots/prtgstatus-panel.png" width="324" alt="PRTG Status in the panel: badges for 1 down, 1 down acknowledged, 2 warning, 1 unusual, 42 paused and 873 up">
 

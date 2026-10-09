@@ -11,7 +11,15 @@ KCM.SimpleKCM {
     property alias cfg_serverUrl: serverUrl.text
     property alias cfg_pollInterval: pollInterval.value
     property alias cfg_notifyOnDown: notifyOnDown.checked
+    property alias cfg_showDownInPanel: showDownInPanel.checked
+    property alias cfg_showAcknowledgedInPanel: showAcknowledgedInPanel.checked
+    property alias cfg_showWarningInPanel: showWarningInPanel.checked
+    property alias cfg_showUnusualInPanel: showUnusualInPanel.checked
+    property alias cfg_showUnknownInPanel: showUnknownInPanel.checked
     property alias cfg_showPausedInPanel: showPausedInPanel.checked
+    property alias cfg_showUpInPanel: showUpInPanel.checked
+    property alias cfg_showZeroInPanel: showZeroInPanel.checked
+    property alias cfg_showTotalInPanel: showTotalInPanel.checked
 
     readonly property string normalizedUrl: serverUrl.text.trim().replace(/\/+$/, "")
 
@@ -164,10 +172,42 @@ KCM.SimpleKCM {
             valueFromText: (text, locale) => parseInt(text)
         }
 
-        QQC2.Switch {
+        QQC2.CheckBox {
+            id: showDownInPanel
+            Kirigami.FormData.label: i18n("Show in panel:")
+            text: i18n("Down")
+        }
+        QQC2.CheckBox {
+            id: showAcknowledgedInPanel
+            text: i18n("Down (acknowledged)")
+        }
+        QQC2.CheckBox {
+            id: showWarningInPanel
+            text: i18n("Warning")
+        }
+        QQC2.CheckBox {
+            id: showUnusualInPanel
+            text: i18n("Unusual")
+        }
+        QQC2.CheckBox {
+            id: showUnknownInPanel
+            text: i18n("Unknown")
+        }
+        QQC2.CheckBox {
             id: showPausedInPanel
-            Kirigami.FormData.label: i18n("Panel:")
-            text: i18n("Show paused sensors")
+            text: i18n("Paused")
+        }
+        QQC2.CheckBox {
+            id: showUpInPanel
+            text: i18n("Up")
+        }
+        QQC2.Switch {
+            id: showZeroInPanel
+            text: i18n("Also show states with no sensors")
+        }
+        QQC2.Switch {
+            id: showTotalInPanel
+            text: i18n("Show the total, e.g. \"(of 919)\"")
         }
 
         QQC2.CheckBox {

@@ -24,6 +24,10 @@
     </entry>
   </group>
   <group name="Appearance">
+    <entry name="badgeStyle" type="String">
+      <label>Badge style: square or rounded</label>
+      <default>square</default>
+    </entry>
     <entry name="colorReviews" type="Color">
       <label>Review requests badge colour</label>
       <default>#0969da</default>

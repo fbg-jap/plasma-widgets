@@ -14,9 +14,41 @@
       <min>1</min>
       <max>60</max>
     </entry>
-    <entry name="showPausedInPanel" type="Bool">
-      <label>Show the paused-sensors badge in the panel</label>
+    <entry name="showDownInPanel" type="Bool">
+      <label>Show the down badge in the panel</label>
       <default>true</default>
+    </entry>
+    <entry name="showAcknowledgedInPanel" type="Bool">
+      <label>Show the down (acknowledged) badge in the panel</label>
+      <default>true</default>
+    </entry>
+    <entry name="showWarningInPanel" type="Bool">
+      <label>Show the warning badge in the panel</label>
+      <default>true</default>
+    </entry>
+    <entry name="showUnusualInPanel" type="Bool">
+      <label>Show the unusual badge in the panel</label>
+      <default>true</default>
+    </entry>
+    <entry name="showUnknownInPanel" type="Bool">
+      <label>Show the unknown badge in the panel</label>
+      <default>true</default>
+    </entry>
+    <entry name="showPausedInPanel" type="Bool">
+      <label>Show the paused badge in the panel</label>
+      <default>true</default>
+    </entry>
+    <entry name="showUpInPanel" type="Bool">
+      <label>Show the up badge in the panel</label>
+      <default>true</default>
+    </entry>
+    <entry name="showZeroInPanel" type="Bool">
+      <label>Show badges for states with no sensors</label>
+      <default>false</default>
+    </entry>
+    <entry name="showTotalInPanel" type="Bool">
+      <label>Show the total number of sensors after the badges</label>
+      <default>false</default>
     </entry>
     <entry name="notifyOnDown" type="Bool">
       <label>Send a desktop notification when a sensor goes down</label>
@@ -24,6 +56,10 @@
     </entry>
   </group>
   <group name="Appearance">
+    <entry name="badgeStyle" type="String">
+      <label>Badge style: square or rounded</label>
+      <default>square</default>
+    </entry>
     <entry name="colorDown" type="Color">
       <label>Down badge colour</label>
       <default>#d71920</default>

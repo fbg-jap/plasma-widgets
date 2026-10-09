@@ -8,6 +8,8 @@ import org.kde.kquickcontrols as KQuickControls
 KCM.SimpleKCM {
     id: page
 
+    property string cfg_badgeStyle
+    property string cfg_badgeStyleDefault
     property color cfg_colorReviews
     property color cfg_colorReviewsDefault
     property color cfg_colorNotifications
@@ -35,6 +37,18 @@ KCM.SimpleKCM {
     ]
 
     Kirigami.FormLayout {
+        QQC2.ComboBox {
+            Kirigami.FormData.label: i18n("Badge style:")
+            model: [i18n("Square"), i18n("Rounded")]
+            currentIndex: page.cfg_badgeStyle === "rounded" ? 1 : 0
+            onActivated: index => page.cfg_badgeStyle = index === 1 ? "rounded" : "square"
+        }
+
+        Item {
+            Kirigami.FormData.isSection: true
+            Kirigami.FormData.label: i18n("Colours")
+        }
+
         Repeater {
             model: page.colorSettings
 

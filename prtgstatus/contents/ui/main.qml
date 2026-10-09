@@ -32,20 +32,31 @@ PlasmoidItem {
 
     // PRTG's sensor states in the order its status bar shows them. The colours come from the
     // Appearance settings, which default to PRTG's own so the badges match its web interface.
+    // "glyph" is used by the square style, "roundGlyph" by the rounded style (PRTG's newer look);
+    // "check" adds the small tick PRTG puts on acknowledged alarms. "inPanel" is the
+    // per-state switch from the General settings.
     readonly property var sensorStates: [
-        { key: "down", label: i18n("Down"), glyph: "↓", color: Plasmoid.configuration.colorDown, codes: [5, 14] },
-        { key: "acknowledged", label: i18n("Down (acknowledged)"), glyph: "✓", color: Plasmoid.configuration.colorAcknowledged, codes: [13] },
-        { key: "warning", label: i18n("Warning"), glyph: "!", color: Plasmoid.configuration.colorWarning, codes: [4] },
-        { key: "unusual", label: i18n("Unusual"), glyph: "~", color: Plasmoid.configuration.colorUnusual, codes: [10] },
-        { key: "paused", label: i18n("Paused"), glyph: "❚❚", color: Plasmoid.configuration.colorPaused, codes: [7, 8, 9, 11, 12] },
-        { key: "up", label: i18n("Up"), glyph: "✓", color: Plasmoid.configuration.colorUp, codes: [3] },
-        { key: "unknown", label: i18n("Unknown"), glyph: "?", color: Plasmoid.configuration.colorUnknown, codes: [1, 2, 6] },
+        { key: "down", label: i18n("Down"), glyph: "↓", roundGlyph: "✕", color: Plasmoid.configuration.colorDown,
+          inPanel: Plasmoid.configuration.showDownInPanel, codes: [5, 14] },
+        { key: "acknowledged", label: i18n("Down (acknowledged)"), glyph: "✓", roundGlyph: "✕", check: true, color: Plasmoid.configuration.colorAcknowledged,
+          inPanel: Plasmoid.configuration.showAcknowledgedInPanel, codes: [13] },
+        { key: "warning", label: i18n("Warning"), glyph: "!", roundGlyph: "!", color: Plasmoid.configuration.colorWarning,
+          inPanel: Plasmoid.configuration.showWarningInPanel, codes: [4] },
+        { key: "unusual", label: i18n("Unusual"), glyph: "~", roundGlyph: "∿", color: Plasmoid.configuration.colorUnusual,
+          inPanel: Plasmoid.configuration.showUnusualInPanel, codes: [10] },
+        { key: "unknown", label: i18n("Unknown"), glyph: "?", roundGlyph: "--", color: Plasmoid.configuration.colorUnknown,
+          inPanel: Plasmoid.configuration.showUnknownInPanel, codes: [1, 2, 6] },
+        { key: "paused", label: i18n("Paused"), glyph: "❚❚", roundGlyph: "❚❚", color: Plasmoid.configuration.colorPaused,
+          inPanel: Plasmoid.configuration.showPausedInPanel, codes: [7, 8, 9, 11, 12] },
+        { key: "up", label: i18n("Up"), glyph: "✓", roundGlyph: "✓", color: Plasmoid.configuration.colorUp,
+          inPanel: Plasmoid.configuration.showUpInPanel, codes: [3] },
     ]
     readonly property var visibleStates: sensorStates.filter(st => (stateCounts[st.key] || 0) > 0)
-    // The panel can leave out paused sensors; the popup always shows every state.
-    readonly property var panelStates: Plasmoid.configuration.showPausedInPanel
-        ? visibleStates
-        : visibleStates.filter(st => st.key !== "paused")
+    // The panel shows the states switched on in the settings, optionally including empty ones;
+    // the popup always shows every state that has sensors.
+    readonly property var panelStates: sensorStates.filter(st => st.inPanel
+        && (Plasmoid.configuration.showZeroInPanel || (stateCounts[st.key] || 0) > 0))
+    readonly property int totalSensors: Object.values(stateCounts).reduce((sum, n) => sum + n, 0)
 
     // White or near-black, whichever reads better on the given background colour.
     function contrastText(background) {
@@ -204,31 +215,56 @@ PlasmoidItem {
     ]
 
     // A PRTG-style status badge: the state's symbol on a block of its colour, then the count.
+    // Square style matches PRTG's classic status bar; rounded style its newer pill-shaped one.
     component StatusBadge: Rectangle {
         property var sensorState
         property int count
         property real size
+        readonly property bool rounded: Plasmoid.configuration.badgeStyle === "rounded"
 
         implicitHeight: size
-        implicitWidth: glyphBlock.width + countLabel.implicitWidth + size * 0.5
-        radius: 2
+        implicitWidth: glyphBlock.width + countLabel.implicitWidth + size * (rounded ? 0.7 : 0.5)
+        radius: rounded ? height / 2 : 2
         color: Plasmoid.configuration.colorCountBackground
-        border.width: 1
+        border.width: rounded ? 1.5 : 1
         border.color: sensorState.color
 
         Rectangle {
             id: glyphBlock
             width: parent.size
             height: parent.size
-            radius: 2
+            radius: parent.rounded ? width / 2 : 2
             color: sensorState.color
 
             PlasmaComponents.Label {
                 anchors.centerIn: parent
-                text: sensorState.glyph
+                text: parent.parent.rounded ? sensorState.roundGlyph : sensorState.glyph
                 color: root.contrastText(sensorState.color)
                 font.bold: true
-                font.pixelSize: parent.height * 0.6
+                font.pixelSize: parent.height * (text.length > 1 && text !== "❚❚" ? 0.45 : 0.6)
+            }
+
+            // The small green tick PRTG adds to acknowledged alarms (rounded style).
+            Rectangle {
+                visible: parent.parent.rounded && sensorState.check === true
+                width: parent.width * 0.5
+                height: width
+                radius: width / 2
+                anchors.right: parent.right
+                anchors.bottom: parent.bottom
+                anchors.rightMargin: -width * 0.2
+                anchors.bottomMargin: -width * 0.15
+                color: Plasmoid.configuration.colorUp
+                border.width: 1
+                border.color: Plasmoid.configuration.colorCountBackground
+
+                PlasmaComponents.Label {
+                    anchors.centerIn: parent
+                    text: "✓"
+                    color: root.contrastText(Plasmoid.configuration.colorUp)
+                    font.bold: true
+                    font.pixelSize: parent.height * 0.75
+                }
             }
         }
 
@@ -244,26 +280,35 @@ PlasmoidItem {
         }
     }
 
-    // A row (or column, in a vertical panel) of status badges, one per state that has sensors.
+    // A row (or column, in a vertical panel) of status badges, optionally followed by "(of N)".
     component BadgeBar: GridLayout {
+        id: bar
         property real badgeSize
         property bool vertical: false
         property var badgeStates: root.visibleStates
+        property bool showTotal: false
+        readonly property int itemCount: badgeStates.length + (showTotal ? 1 : 0)
 
         flow: vertical ? GridLayout.TopToBottom : GridLayout.LeftToRight
-        rows: vertical ? badgeStates.length : 1
-        columns: vertical ? 1 : badgeStates.length
+        rows: vertical ? Math.max(itemCount, 1) : 1
+        columns: vertical ? 1 : Math.max(itemCount, 1)
         rowSpacing: Kirigami.Units.smallSpacing
         columnSpacing: Kirigami.Units.smallSpacing
 
         Repeater {
-            model: badgeStates
+            model: bar.badgeStates
             StatusBadge {
                 required property var modelData
                 sensorState: modelData
-                count: root.stateCounts[modelData.key]
-                size: badgeSize
+                count: root.stateCounts[modelData.key] || 0
+                size: bar.badgeSize
             }
+        }
+
+        PlasmaComponents.Label {
+            visible: bar.showTotal
+            text: i18n("(of %1)", root.totalSensors)
+            font.pixelSize: bar.badgeSize * 0.6
         }
     }
 
@@ -272,7 +317,8 @@ PlasmoidItem {
 
         readonly property bool vertical: Plasmoid.formFactor === PlasmaCore.Types.Vertical
         readonly property real badgeSize: Math.min(Kirigami.Units.iconSizes.smallMedium, vertical ? width : height)
-        readonly property bool showBadges: root.loaded && root.panelStates.length > 0
+        readonly property bool showTotal: Plasmoid.configuration.showTotalInPanel
+        readonly property bool showBadges: root.loaded && (root.panelStates.length > 0 || showTotal)
 
         hoverEnabled: true
         acceptedButtons: Qt.LeftButton | Qt.MiddleButton
@@ -292,6 +338,7 @@ PlasmoidItem {
             anchors.centerIn: parent
             visible: compact.showBadges
             badgeStates: root.panelStates
+            showTotal: compact.showTotal
             vertical: compact.vertical
             badgeSize: compact.badgeSize
             opacity: root.errorText ? 0.5 : 1

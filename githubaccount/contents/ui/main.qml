@@ -250,19 +250,20 @@ PlasmoidItem {
     component CountBadge: Rectangle {
         property var badge
         property real size
+        readonly property bool rounded: Plasmoid.configuration.badgeStyle === "rounded"
 
         implicitHeight: size
-        implicitWidth: iconBlock.width + countLabel.implicitWidth + size * 0.5
-        radius: 2
+        implicitWidth: iconBlock.width + countLabel.implicitWidth + size * (rounded ? 0.7 : 0.5)
+        radius: rounded ? height / 2 : 2
         color: Plasmoid.configuration.colorCountBackground
-        border.width: 1
+        border.width: rounded ? 1.5 : 1
         border.color: badge.color
 
         Rectangle {
             id: iconBlock
             width: parent.size
             height: parent.size
-            radius: 2
+            radius: parent.rounded ? width / 2 : 2
             color: badge.color
 
             Kirigami.Icon {
