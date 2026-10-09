@@ -8,7 +8,8 @@ from statusbadges.model import ProviderError
 
 
 def request(url: str, headers: dict | None = None, params: dict | list | None = None, body=None,
-            method: str | None = None, auth_name: str = "the server") -> object:
+            method: str | None = None, auth_name: str = "the server", with_headers: bool = False) -> object:
+    """The parsed JSON response, or (JSON, response headers) when with_headers is set."""
     if params:
         url += ("&" if "?" in url else "?") + urllib.parse.urlencode(params, doseq=True)
     data = json.dumps(body).encode() if body is not None else None
@@ -18,7 +19,8 @@ def request(url: str, headers: dict | None = None, params: dict | list | None = 
     try:
         with urllib.request.urlopen(req, timeout=30) as response:
             raw = response.read()
-            return json.loads(raw) if raw else None
+            data = json.loads(raw) if raw else None
+            return (data, response.headers) if with_headers else data
     except urllib.error.HTTPError as e:
         if e.code in (401, 403):
             raise ProviderError(f"{auth_name} rejected the API key ({e.code}). Check the key in the settings.")

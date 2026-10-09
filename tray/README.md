@@ -1,10 +1,10 @@
 # Status Badges (tray app)
 
-A cross-platform tray app for Windows, macOS and Linux with the same status badges as the KDE Plasma widgets in this repository: GitHub Status, GitHub Account, PRTG, Docker, Bugsink and Dokploy.
+A cross-platform tray app for Windows, macOS and Linux with the same status badges as the KDE Plasma widgets in this repository: GitHub Status, GitHub Account, PRTG, Docker, Bugsink, Sentry, Dokploy and self-hosted GitHub Actions runners.
 
 - **Tray icon:** a round badge in the colour of the most serious problem, with the number of problems, or a green tick when everything is fine. Hover for a summary of every widget.
 - **Popup:** click the icon for a card per widget, with its badges (square or rounded) and the items behind them: problem sensors, failing PRs, containers, open issues, services. Click an item to open it in the browser. Containers, issues and services have buttons to start, stop, restart, resolve, mute or deploy.
-- **Notifications:** when something newly goes wrong, for example a sensor goes down, CI fails, a container crashes, a new issue arrives or a deployment fails.
+- **Notifications:** when something newly goes wrong, for example a sensor goes down, CI fails, a container crashes, a new issue arrives, a deployment fails or a runner goes offline.
 - **Settings:** add, reorder and remove widgets, choose which badges show, how often each one checks, and start at login.
 
 ## Download
@@ -22,7 +22,9 @@ The app isn't code-signed. The first time, Windows SmartScreen may ask you to co
 | PRTG Status | A read-only PRTG API key (PRTG 22.2 or newer) |
 | Docker Status | The `docker` CLI with access to the daemon (Docker Desktop on Windows and macOS) |
 | Bugsink Status | A Bugsink API token |
+| Sentry Status | A Sentry auth token with the `event:read` and `event:write` scopes, and the organization slug |
 | Dokploy Status | A Dokploy API key |
+| Runner Status | The address of a runner dashboard that serves `/api/status`; no key |
 
 API keys are pasted into the settings window and saved in your system's credential store: Windows Credential Manager, the macOS Keychain, or the Secret Service keyring on Linux. They're never written to the settings file. On Linux, keys already stored by the Plasma widgets are picked up automatically.
 

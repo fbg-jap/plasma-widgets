@@ -14,7 +14,8 @@ def iso_ago(**delta) -> str:
 
 
 class FakeHTTP:
-    """Answers httpjson.request from canned responses, matched by the longest URL prefix."""
+    """Answers httpjson.request from canned responses, matched by the longest URL prefix. A response
+    given as (data, headers) also carries headers, for callers that ask for them."""
 
     def __init__(self):
         self.routes = {}
@@ -23,13 +24,16 @@ class FakeHTTP:
     def add(self, url_prefix: str, response):
         self.routes[url_prefix] = response
 
-    def __call__(self, url, headers=None, params=None, body=None, method=None, auth_name="the server"):
+    def __call__(self, url, headers=None, params=None, body=None, method=None, auth_name="the server",
+                 with_headers=False):
         self.calls.append({"url": url, "headers": headers or {}, "params": params, "body": body, "method": method})
         matches = [p for p in self.routes if url.startswith(p)]
         if not matches:
             raise ProviderError(f"no fake response for {url}")
         response = self.routes[max(matches, key=len)]
-        return response(url, params) if callable(response) else response
+        response = response(url, params) if callable(response) else response
+        data, response_headers = response if isinstance(response, tuple) else (response, {})
+        return (data, response_headers) if with_headers else data
 
 
 class FakeProcess:

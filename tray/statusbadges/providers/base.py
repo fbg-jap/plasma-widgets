@@ -26,6 +26,9 @@ class Provider:
     default_interval = 120   # seconds between checks
     states: list[State] = []
     fields: list[Field] = []
+    # Notify again when an item comes back to a problem state after leaving it, e.g. a runner that
+    # goes offline twice. Off for issues, which shouldn't count as new when they reopen.
+    notify_on_return = False
 
     def __init__(self, settings: dict):
         self.settings = settings

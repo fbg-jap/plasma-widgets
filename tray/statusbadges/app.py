@@ -154,7 +154,10 @@ class WidgetObject(QObject):
             elif fresh:
                 self.controller.notify(f"{self._name()}: {len(fresh)} new problems",
                                        "\n".join(item.title for item in fresh[:4]))
-        self.seen_problem_ids = (self.seen_problem_ids or set()) | set(current)
+        if self.provider_cls.notify_on_return:
+            self.seen_problem_ids = set(current)
+        else:
+            self.seen_problem_ids = (self.seen_problem_ids or set()) | set(current)
 
     def run_action(self, item_id: str, action: str):
         self._busy.append(item_id)

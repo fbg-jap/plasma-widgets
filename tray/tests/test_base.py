@@ -5,7 +5,8 @@ from statusbadges.providers.prtg import PRTGStatus
 
 
 def test_every_provider_is_registered():
-    assert set(registry.providers) == {"githubstatus", "githubaccount", "prtg", "docker", "bugsink", "dokploy"}
+    assert set(registry.providers) == {"githubstatus", "githubaccount", "prtg", "docker", "bugsink", "dokploy",
+                                        "runner", "sentry"}
 
 
 def test_every_provider_is_complete():
