@@ -23,6 +23,7 @@ query='{
   viewer {
     login
     pullRequests(states: OPEN, first: 20, orderBy: {field: UPDATED_AT, direction: DESC}) {
+      totalCount
       nodes {
         title url number isDraft
         repository { nameWithOwner }
@@ -38,6 +39,7 @@ query='{
     }
   }
   reviews: search(query: "is:open is:pr review-requested:@me archived:false", type: ISSUE, first: 20) {
+    issueCount
     nodes {
       ... on PullRequest { title url number repository { nameWithOwner } author { login } }
     }

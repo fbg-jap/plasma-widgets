@@ -20,21 +20,47 @@ PlasmoidItem {
     property var reviews: []
     property var pullRequests: []
     property var repos: []
+    // Totals from GitHub, not capped at the 20 items the lists show.
+    property int prCount: 0
+    property int reviewCount: 0
     property var seenNotificationIds: null
     property date lastChecked
     property string errorText: ""
     property bool loading: false
 
     readonly property var unreadNotifications: notifications.filter(n => n.unread)
-    readonly property int badgeCount: unreadNotifications.length + reviews.length
+
+    // CI state of your open PRs plus the main branch of your recently pushed repos.
+    readonly property var ciStates: pullRequests.map(pr => pr.ci).concat(repos.map(r => r.ci))
+    readonly property int ciFailing: ciStates.filter(st => st === "FAILURE" || st === "ERROR").length
+    readonly property int ciRunning: ciStates.filter(st => st === "PENDING" || st === "EXPECTED").length
+    readonly property int ciPassing: ciStates.filter(st => st === "SUCCESS").length
+
+    // GitHub's own colours, so the badges and dots look like github.com.
+    readonly property color blueColor: "#0969da"
+    readonly property color greenColor: "#1a7f37"
+    readonly property color redColor: "#cf222e"
+    readonly property color yellowColor: "#bf8700"
+    readonly property color greyColor: "#6e7781"
+
+    // The badges shown in the panel and the popup, PRTG-status-bar style; zero counts are hidden.
+    readonly property var countBadges: [
+        { label: i18n("review requests"), icon: "view-visible-symbolic", color: blueColor, count: reviewCount },
+        { label: i18n("unread notifications"), icon: "notifications-symbolic", color: greyColor, count: unreadNotifications.length },
+        { label: i18n("open pull requests"), icon: "vcs-merge-request-symbolic", color: greenColor, count: prCount },
+        { label: i18n("CI failing"), icon: "dialog-cancel-symbolic", color: redColor, count: ciFailing },
+        { label: i18n("CI running"), icon: "chronometer-symbolic", color: yellowColor, count: ciRunning },
+        { label: i18n("CI passing"), icon: "checkmark-symbolic", color: greenColor, count: ciPassing },
+    ]
+    readonly property var visibleBadges: countBadges.filter(b => b.count > 0)
 
     function ciColor(state) {
         switch (state) {
-        case "SUCCESS": return Kirigami.Theme.positiveTextColor
+        case "SUCCESS": return greenColor
         case "FAILURE":
-        case "ERROR": return Kirigami.Theme.negativeTextColor
+        case "ERROR": return redColor
         case "PENDING":
-        case "EXPECTED": return Kirigami.Theme.neutralTextColor
+        case "EXPECTED": return yellowColor
         default: return Kirigami.Theme.disabledTextColor
         }
     }
@@ -86,6 +112,8 @@ PlasmoidItem {
         reviews = []
         pullRequests = []
         repos = []
+        prCount = 0
+        reviewCount = 0
         seenNotificationIds = null
         errorText = ""
         refresh(false)
@@ -96,6 +124,8 @@ PlasmoidItem {
         login = gql.viewer.login
         notifications = data.notifications
         reviews = gql.reviews.nodes.filter(pr => pr.url)
+        reviewCount = gql.reviews.issueCount
+        prCount = gql.viewer.pullRequests.totalCount
         pullRequests = gql.viewer.pullRequests.nodes.map(pr => ({
             title: pr.title,
             url: pr.url,
@@ -162,11 +192,14 @@ PlasmoidItem {
     }
 
     Plasmoid.icon: "vcs-branch"
-    Plasmoid.status: PlasmaCore.Types.ActiveStatus
+    Plasmoid.status: ciFailing > 0 || reviewCount > 0
+        ? PlasmaCore.Types.NeedsAttentionStatus
+        : PlasmaCore.Types.ActiveStatus
 
     toolTipMainText: login ? i18n("GitHub: %1", login) : i18n("GitHub Account")
     toolTipSubText: errorText
-        || i18n("%1 unread notifications · %2 review requests", unreadNotifications.length, reviews.length)
+        || (login && visibleBadges.length === 0 ? i18n("Nothing needs your attention") : "")
+        || visibleBadges.map(b => i18n("%1 %2", b.count, b.label)).join(" · ")
 
     switchWidth: Kirigami.Units.gridUnit * 14
     switchHeight: Kirigami.Units.gridUnit * 14
@@ -205,8 +238,75 @@ PlasmoidItem {
         onTriggered: root.refresh(false)
     }
 
+    // A PRTG-style count badge: an icon on a block of the badge's colour, then the count.
+    component CountBadge: Rectangle {
+        property var badge
+        property real size
+
+        implicitHeight: size
+        implicitWidth: iconBlock.width + countLabel.implicitWidth + size * 0.5
+        radius: 2
+        color: "#2b2f33"
+        border.width: 1
+        border.color: badge.color
+
+        Rectangle {
+            id: iconBlock
+            width: parent.size
+            height: parent.size
+            radius: 2
+            color: badge.color
+
+            Kirigami.Icon {
+                anchors.centerIn: parent
+                width: parent.height * 0.65
+                height: width
+                source: badge.icon
+                isMask: true
+                color: "white"
+            }
+        }
+
+        PlasmaComponents.Label {
+            id: countLabel
+            anchors.left: iconBlock.right
+            anchors.right: parent.right
+            anchors.verticalCenter: parent.verticalCenter
+            horizontalAlignment: Text.AlignHCenter
+            text: badge.count
+            color: "white"
+            font.pixelSize: parent.size * 0.6
+        }
+    }
+
+    // A row (or column, in a vertical panel) of count badges, one per non-zero count.
+    component BadgeBar: GridLayout {
+        property real badgeSize
+        property bool vertical: false
+
+        flow: vertical ? GridLayout.TopToBottom : GridLayout.LeftToRight
+        rows: vertical ? root.visibleBadges.length : 1
+        columns: vertical ? 1 : root.visibleBadges.length
+        rowSpacing: Kirigami.Units.smallSpacing
+        columnSpacing: Kirigami.Units.smallSpacing
+
+        Repeater {
+            model: root.visibleBadges
+            CountBadge {
+                required property var modelData
+                badge: modelData
+                size: badgeSize
+            }
+        }
+    }
+
     compactRepresentation: MouseArea {
         id: compact
+
+        readonly property bool vertical: Plasmoid.formFactor === PlasmaCore.Types.Vertical
+        readonly property real badgeSize: Math.min(Kirigami.Units.iconSizes.smallMedium, vertical ? width : height)
+        readonly property bool showBadges: root.login !== "" && root.visibleBadges.length > 0
+
         hoverEnabled: true
         acceptedButtons: Qt.LeftButton | Qt.MiddleButton
         onClicked: mouse => {
@@ -217,32 +317,27 @@ PlasmoidItem {
             }
         }
 
-        Kirigami.Icon {
-            anchors.fill: parent
-            source: Plasmoid.icon
-            active: compact.containsMouse
+        Layout.minimumWidth: vertical ? 0 : (showBadges ? badges.implicitWidth : badgeSize)
+        Layout.minimumHeight: vertical ? (showBadges ? badges.implicitHeight : badgeSize) : 0
+
+        BadgeBar {
+            id: badges
+            anchors.centerIn: parent
+            visible: compact.showBadges
+            vertical: compact.vertical
+            badgeSize: compact.badgeSize
             opacity: root.errorText ? 0.5 : 1
         }
 
-        Rectangle {
-            visible: root.badgeCount > 0
-            anchors.right: parent.right
-            anchors.bottom: parent.bottom
-            height: Math.max(Kirigami.Units.gridUnit * 0.75, parent.height * 0.5)
-            width: Math.max(height, badgeLabel.implicitWidth + Kirigami.Units.smallSpacing)
-            radius: height / 2
-            color: Kirigami.Theme.highlightColor
-            border.width: 1
-            border.color: Kirigami.Theme.backgroundColor
-
-            PlasmaComponents.Label {
-                id: badgeLabel
-                anchors.centerIn: parent
-                text: root.badgeCount > 99 ? "99+" : root.badgeCount
-                color: Kirigami.Theme.highlightedTextColor
-                font.pixelSize: parent.height * 0.75
-                font.bold: true
-            }
+        // While loading, on errors, or when nothing needs attention.
+        Kirigami.Icon {
+            anchors.centerIn: parent
+            width: compact.badgeSize
+            height: compact.badgeSize
+            visible: !compact.showBadges
+            source: Plasmoid.icon
+            active: compact.containsMouse
+            opacity: root.errorText || root.login === "" ? 0.5 : 1
         }
     }
 
@@ -340,12 +435,23 @@ PlasmoidItem {
             }
         }
 
-        footer: PlasmaComponents.Label {
-            padding: Kirigami.Units.smallSpacing
-            opacity: 0.7
-            font: Kirigami.Theme.smallFont
-            visible: text !== ""
-            text: isNaN(root.lastChecked) ? "" : i18n("Last checked %1", root.lastChecked.toLocaleTimeString(Qt.locale(), Locale.ShortFormat))
+        footer: RowLayout {
+            spacing: Kirigami.Units.smallSpacing
+
+            BadgeBar {
+                Layout.margins: Kirigami.Units.smallSpacing
+                visible: root.login !== ""
+                badgeSize: Kirigami.Units.iconSizes.smallMedium
+            }
+
+            PlasmaComponents.Label {
+                Layout.fillWidth: true
+                Layout.margins: Kirigami.Units.smallSpacing
+                horizontalAlignment: Text.AlignRight
+                opacity: 0.7
+                font: Kirigami.Theme.smallFont
+                text: isNaN(root.lastChecked) ? "" : i18n("Last checked %1", root.lastChecked.toLocaleTimeString(Qt.locale(), Locale.ShortFormat))
+            }
         }
 
         PlasmaExtras.PlaceholderMessage {

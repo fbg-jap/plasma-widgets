@@ -5,9 +5,8 @@ KDE Plasma 6 widgets for keeping an eye on GitHub and PRTG from the panel or des
 | Widget | Id | Shows |
 |---|---|---|
 | [GitHub Status](githubstatus) | `dk.madebypless.githubstatus` | GitHub's service health from githubstatus.com, with active incidents |
-| [GitHub Account](githubaccount) | `dk.madebypless.githubaccount` | Your notifications, review requests, open PRs with CI state, and CI on recently pushed repos |
-| [GitHub Counts](githubcounts) | `dk.madebypless.githubcounts` | Just three numbers in the panel: open PRs, review requests, failing CI |
-| [PRTG Status](prtgstatus) | `dk.madebypless.prtgstatus` | Down / warning / unusual sensors from a PRTG Network Monitor server |
+| [GitHub Account](githubaccount) | `dk.madebypless.githubaccount` | Count badges for review requests, notifications, open PRs and CI; click for the full lists. One widget per account. |
+| [PRTG Status](prtgstatus) | `dk.madebypless.prtgstatus` | PRTG-style status badges (down, warning, unusual, paused, up…), with the problem sensors in a popup |
 
 ## Screenshots
 
@@ -23,25 +22,19 @@ In the panel, a coloured dot shows the overall status. Click it for the per-comp
 
 ### GitHub Account
 
-The badge counts unread notifications plus review requests:
+The panel shows count badges for review requests, unread notifications, open pull requests, and CI failing / running / passing. Badges with a zero count are hidden. Click for the full lists:
 
-<img src="screenshots/githubaccount-panel.png" width="66" alt="GitHub Account in the panel: branch icon with a badge showing 5">
+<img src="screenshots/githubaccount-panel.png" width="303" alt="GitHub Account in the panel: badges for 2 review requests, 3 unread notifications, 4 open pull requests, 2 CI failing, 2 CI running and 2 CI passing">
 
-<img src="screenshots/githubaccount-popup.png" width="432" alt="GitHub Account popup: review requests, notifications with unread ones in bold, and open pull requests with green, red, orange and grey check dots">
-
-### GitHub Counts
-
-Open PRs, review requests, and failing CI, shown directly in the panel:
-
-<img src="screenshots/githubcounts-panel.png" width="161" alt="GitHub Counts: 4 open pull requests, 2 review requests, 2 failing CI items in red">
+<img src="screenshots/githubaccount-popup.png" width="468" alt="GitHub Account popup: review requests, notifications with unread ones in bold, open pull requests with check dots, and the count badges along the bottom">
 
 ### PRTG Status
 
-A pill appears in the panel for each problem category (down, warning, unusual):
+The panel shows a badge per sensor state, like PRTG's own status bar. Click for the problem sensors:
 
-<img src="screenshots/prtgstatus-panel.png" width="89" alt="PRTG Status in the panel: red pill 1, yellow pill 2, orange pill 1">
+<img src="screenshots/prtgstatus-panel.png" width="324" alt="PRTG Status in the panel: badges for 1 down, 1 down acknowledged, 2 warning, 1 unusual, 42 paused and 873 up">
 
-<img src="screenshots/prtgstatus-popup.png" width="432" alt="PRTG Status popup: sensors grouped under Down, Warning and Unusual with device, sensor, last value and message">
+<img src="screenshots/prtgstatus-popup.png" width="468" alt="PRTG Status popup: sensors grouped under Down, Warning, Unusual and Acknowledged, with the status badges along the bottom">
 
 ## Install
 
@@ -66,7 +59,7 @@ To update after pulling changes, use `-u` instead of `-i`. A widget already on t
 ## Requirements
 
 - Plasma 6
-- **GitHub Account / GitHub Counts:** the [GitHub CLI](https://cli.github.com/) (`gh`), logged in with `gh auth login`. The widgets use its stored login and never handle a token themselves. Each widget can show any account `gh` is logged in to, picked in its settings, so you can add one widget per account. Run `gh auth login` again to add more accounts.
+- **GitHub Account:** the [GitHub CLI](https://cli.github.com/) (`gh`), logged in with `gh auth login`. The widget uses its stored login and never handles a token itself. It can show any account `gh` is logged in to, picked in its settings, so you can add one widget per account. Run `gh auth login` again to add more accounts.
 - **PRTG Status:** `curl` and `secret-tool` (libsecret), and PRTG 22.2 or newer for API keys.
 
 ## PRTG setup

@@ -25,14 +25,31 @@ PlasmoidItem {
     property string errorText: ""
     property bool loading: false
 
+    // Number of sensors in each state below, keyed by state key.
+    property var stateCounts: ({})
+
     readonly property bool allGood: loaded && down.length === 0 && warning.length === 0 && unusual.length === 0
 
-    readonly property color downColor: Kirigami.Theme.negativeTextColor
-    readonly property color warningColor: Kirigami.Theme.neutralTextColor
-    // PRTG shows "unusual" in orange, between warning yellow and down red.
-    readonly property color unusualColor: Qt.tint(Kirigami.Theme.neutralTextColor,
-        Qt.rgba(Kirigami.Theme.negativeTextColor.r, Kirigami.Theme.negativeTextColor.g, Kirigami.Theme.negativeTextColor.b, 0.5))
-    readonly property color okColor: Kirigami.Theme.positiveTextColor
+    // PRTG's sensor states in the order its status bar shows them, with PRTG's colours
+    // so the badges look like the PRTG web interface.
+    readonly property var sensorStates: [
+        { key: "down", label: i18n("Down"), glyph: "↓", color: "#d71920", glyphColor: "white", codes: [5, 14] },
+        { key: "acknowledged", label: i18n("Down (acknowledged)"), glyph: "✓", color: "#e77579", glyphColor: "white", codes: [13] },
+        { key: "warning", label: i18n("Warning"), glyph: "!", color: "#ffcb05", glyphColor: "#202020", codes: [4] },
+        { key: "unusual", label: i18n("Unusual"), glyph: "~", color: "#ff9800", glyphColor: "white", codes: [10] },
+        { key: "paused", label: i18n("Paused"), glyph: "❚❚", color: "#2a72d6", glyphColor: "white", codes: [7, 8, 9, 11, 12] },
+        { key: "up", label: i18n("Up"), glyph: "✓", color: "#7ba700", glyphColor: "white", codes: [3] },
+        { key: "unknown", label: i18n("Unknown"), glyph: "?", color: "#8a8a8a", glyphColor: "white", codes: [1, 2, 6] },
+    ]
+    readonly property var visibleStates: sensorStates.filter(st => (stateCounts[st.key] || 0) > 0)
+
+    function stateColor(key) {
+        return sensorStates.find(st => st.key === key).color
+    }
+
+    readonly property color downColor: stateColor("down")
+    readonly property color warningColor: stateColor("warning")
+    readonly property color unusualColor: stateColor("unusual")
 
     function shellQuote(s) {
         return "'" + s.replace(/'/g, "'\\''") + "'"
@@ -51,7 +68,14 @@ PlasmoidItem {
     }
 
     function apply(data) {
-        const sensors = data.sensors
+        const counts = {}
+        data.all.sensors.forEach(s => {
+            const st = sensorStates.find(st => st.codes.includes(s.status_raw)) || sensorStates[sensorStates.length - 1]
+            counts[st.key] = (counts[st.key] || 0) + 1
+        })
+        stateCounts = counts
+
+        const sensors = data.problems.sensors
         down = sensors.filter(s => s.status_raw === 5 || s.status_raw === 14)
         acknowledged = sensors.filter(s => s.status_raw === 13)
         warning = sensors.filter(s => s.status_raw === 4)
@@ -139,6 +163,9 @@ PlasmoidItem {
         if (!serverUrl) return i18n("No server configured")
         if (errorText) return errorText
         if (!loaded) return i18n("Loading…")
+        if (visibleStates.length > 0) {
+            return visibleStates.map(st => i18n("%1 %2", stateCounts[st.key], st.label.toLowerCase())).join(" · ")
+        }
         if (allGood) return i18n("All sensors OK")
         return [
             i18n("%1 down", down.length),
@@ -166,22 +193,66 @@ PlasmoidItem {
         }
     ]
 
-    // A coloured pill with a number, used in the panel.
-    component CountPill: Rectangle {
-        property string value
+    // A PRTG-style status badge: the state's symbol on a block of its colour, then the count.
+    component StatusBadge: Rectangle {
+        property var sensorState
+        property int count
         property real size
 
         implicitHeight: size
-        implicitWidth: Math.max(size, pillLabel.implicitWidth + Kirigami.Units.smallSpacing * 2)
-        radius: size / 2
+        implicitWidth: glyphBlock.width + countLabel.implicitWidth + size * 0.5
+        radius: 2
+        color: "#2b2f33"
+        border.width: 1
+        border.color: sensorState.color
+
+        Rectangle {
+            id: glyphBlock
+            width: parent.size
+            height: parent.size
+            radius: 2
+            color: sensorState.color
+
+            PlasmaComponents.Label {
+                anchors.centerIn: parent
+                text: sensorState.glyph
+                color: sensorState.glyphColor
+                font.bold: true
+                font.pixelSize: parent.height * 0.6
+            }
+        }
 
         PlasmaComponents.Label {
-            id: pillLabel
-            anchors.centerIn: parent
-            text: parent.value
+            id: countLabel
+            anchors.left: glyphBlock.right
+            anchors.right: parent.right
+            anchors.verticalCenter: parent.verticalCenter
+            horizontalAlignment: Text.AlignHCenter
+            text: count
             color: "white"
-            font.bold: true
-            font.pixelSize: parent.size * 0.7
+            font.pixelSize: parent.size * 0.6
+        }
+    }
+
+    // A row (or column, in a vertical panel) of status badges, one per state that has sensors.
+    component BadgeBar: GridLayout {
+        property real badgeSize
+        property bool vertical: false
+
+        flow: vertical ? GridLayout.TopToBottom : GridLayout.LeftToRight
+        rows: vertical ? root.visibleStates.length : 1
+        columns: vertical ? 1 : root.visibleStates.length
+        rowSpacing: Kirigami.Units.smallSpacing
+        columnSpacing: Kirigami.Units.smallSpacing
+
+        Repeater {
+            model: root.visibleStates
+            StatusBadge {
+                required property var modelData
+                sensorState: modelData
+                count: root.stateCounts[modelData.key]
+                size: badgeSize
+            }
         }
     }
 
@@ -189,7 +260,8 @@ PlasmoidItem {
         id: compact
 
         readonly property bool vertical: Plasmoid.formFactor === PlasmaCore.Types.Vertical
-        readonly property real pillSize: Math.min(Kirigami.Units.iconSizes.smallMedium, vertical ? width : height)
+        readonly property real badgeSize: Math.min(Kirigami.Units.iconSizes.smallMedium, vertical ? width : height)
+        readonly property bool showBadges: root.loaded && root.visibleStates.length > 0
 
         hoverEnabled: true
         acceptedButtons: Qt.LeftButton | Qt.MiddleButton
@@ -201,57 +273,27 @@ PlasmoidItem {
             }
         }
 
-        Layout.minimumWidth: vertical ? 0 : pills.implicitWidth
-        Layout.minimumHeight: vertical ? pills.implicitHeight : 0
+        Layout.minimumWidth: vertical ? 0 : (showBadges ? badges.implicitWidth : badgeSize)
+        Layout.minimumHeight: vertical ? (showBadges ? badges.implicitHeight : badgeSize) : 0
 
-        GridLayout {
-            id: pills
+        BadgeBar {
+            id: badges
             anchors.centerIn: parent
-            flow: compact.vertical ? GridLayout.TopToBottom : GridLayout.LeftToRight
-            rows: compact.vertical ? 4 : 1
-            columns: compact.vertical ? 1 : 4
-            rowSpacing: Kirigami.Units.smallSpacing
-            columnSpacing: Kirigami.Units.smallSpacing
-
-            Kirigami.Icon {
-                Layout.preferredWidth: compact.pillSize
-                Layout.preferredHeight: compact.pillSize
-                source: Plasmoid.icon
-                active: compact.containsMouse
-                opacity: root.errorText || !root.loaded ? 0.5 : 1
-                visible: !root.loaded || root.allGood || root.errorText !== ""
-            }
-            CountPill {
-                size: compact.pillSize
-                visible: root.loaded && root.down.length > 0
-                color: root.downColor
-                value: root.down.length
-            }
-            CountPill {
-                size: compact.pillSize
-                visible: root.loaded && root.warning.length > 0
-                color: root.warningColor
-                value: root.warning.length
-            }
-            CountPill {
-                size: compact.pillSize
-                visible: root.loaded && root.unusual.length > 0
-                color: root.unusualColor
-                value: root.unusual.length
-            }
+            visible: compact.showBadges
+            vertical: compact.vertical
+            badgeSize: compact.badgeSize
+            opacity: root.errorText ? 0.5 : 1
         }
 
-        // Small green dot on the icon when everything is up.
-        Rectangle {
-            visible: root.allGood && !root.errorText
-            width: compact.pillSize * 0.4
-            height: width
-            radius: width / 2
-            x: pills.x + compact.pillSize - width
-            y: pills.y + compact.pillSize - height
-            color: root.okColor
-            border.width: 1
-            border.color: Kirigami.Theme.backgroundColor
+        // Before the first successful check, or when nothing is configured.
+        Kirigami.Icon {
+            anchors.centerIn: parent
+            width: compact.badgeSize
+            height: compact.badgeSize
+            visible: !compact.showBadges
+            source: Plasmoid.icon
+            active: compact.containsMouse
+            opacity: 0.5
         }
     }
 
@@ -364,12 +406,23 @@ PlasmoidItem {
             }
         }
 
-        footer: PlasmaComponents.Label {
-            padding: Kirigami.Units.smallSpacing
-            opacity: 0.7
-            font: Kirigami.Theme.smallFont
-            visible: text !== ""
-            text: isNaN(root.lastChecked) ? "" : i18n("Last checked %1", root.lastChecked.toLocaleTimeString(Qt.locale(), Locale.ShortFormat))
+        footer: RowLayout {
+            spacing: Kirigami.Units.smallSpacing
+
+            BadgeBar {
+                Layout.margins: Kirigami.Units.smallSpacing
+                visible: root.loaded
+                badgeSize: Kirigami.Units.iconSizes.smallMedium
+            }
+
+            PlasmaComponents.Label {
+                Layout.fillWidth: true
+                Layout.margins: Kirigami.Units.smallSpacing
+                horizontalAlignment: Text.AlignRight
+                opacity: 0.7
+                font: Kirigami.Theme.smallFont
+                text: isNaN(root.lastChecked) ? "" : i18n("Last checked %1", root.lastChecked.toLocaleTimeString(Qt.locale(), Locale.ShortFormat))
+            }
         }
 
         PlasmaExtras.PlaceholderMessage {
