@@ -13,65 +13,70 @@ import org.kde.notification
 PlasmoidItem {
     id: root
 
-    readonly property string scriptPath: Qt.resolvedUrl("../code/fetch.sh").toString().replace("file://", "")
+    readonly property string scriptPath: Qt.resolvedUrl("../code/bugsink.py").toString().replace("file://", "")
     readonly property string serverUrl: Plasmoid.configuration.serverUrl.trim().replace(/\/+$/, "")
 
-    property var down: []
-    property var acknowledged: []
-    property var warning: []
-    property var unusual: []
-    property var seenDownIds: null
+    // Projects as {id, name, open: [issues], muted, resolved, truncated}.
+    property var projects: []
+    // Ids of issues already seen, to notify only about new ones; null until the first check.
+    property var seenIssueIds: null
+    // Ids of issues with a resolve/mute in progress.
+    property var busyIds: ({})
     property bool loaded: false
     property date lastChecked
     property string errorText: ""
-    property bool loading: false
+    property string actionError: ""
 
-    // Number of sensors in each state below, keyed by state key.
-    property var stateCounts: ({})
+    // An open issue counts as new when it was first seen within this many hours.
+    readonly property int newWithinHours: 24
 
-    readonly property bool allGood: loaded && down.length === 0 && warning.length === 0 && unusual.length === 0
-
-    // PRTG's sensor states in the order its status bar shows them. The colours come from the
-    // Appearance settings, which default to PRTG's own so the badges match its web interface.
-    // "glyph" (a glyphPaths key) is used by the square style, "roundGlyph" by the rounded style (PRTG's newer look);
-    // "check" adds the small tick PRTG puts on acknowledged alarms. "inPanel" is the
-    // per-state switch from the General settings.
-    readonly property var sensorStates: [
-        { key: "down", label: i18n("Down"), glyph: "arrowDown", roundGlyph: "cross", color: Plasmoid.configuration.colorDown,
-          inPanel: Plasmoid.configuration.showDownInPanel, codes: [5, 14] },
-        { key: "acknowledged", label: i18n("Down (acknowledged)"), glyph: "check", roundGlyph: "cross", check: true, color: Plasmoid.configuration.colorAcknowledged,
-          inPanel: Plasmoid.configuration.showAcknowledgedInPanel, codes: [13] },
-        { key: "warning", label: i18n("Warning"), glyph: "exclamation", roundGlyph: "exclamation", color: Plasmoid.configuration.colorWarning,
-          inPanel: Plasmoid.configuration.showWarningInPanel, codes: [4] },
-        { key: "unusual", label: i18n("Unusual"), glyph: "wave", roundGlyph: "wave", color: Plasmoid.configuration.colorUnusual,
-          inPanel: Plasmoid.configuration.showUnusualInPanel, codes: [10] },
-        { key: "unknown", label: i18n("Unknown"), glyph: "question", roundGlyph: "dash", color: Plasmoid.configuration.colorUnknown,
-          inPanel: Plasmoid.configuration.showUnknownInPanel, codes: [1, 2, 6] },
-        { key: "paused", label: i18n("Paused"), glyph: "pause", roundGlyph: "pause", color: Plasmoid.configuration.colorPaused,
-          inPanel: Plasmoid.configuration.showPausedInPanel, codes: [7, 8, 9, 11, 12] },
-        { key: "up", label: i18n("Up"), glyph: "check", roundGlyph: "check", color: Plasmoid.configuration.colorUp,
-          inPanel: Plasmoid.configuration.showUpInPanel, codes: [3] },
+    // Issue states in panel order, worst first. Colours come from the Appearance settings.
+    // "glyph" (a glyphPaths key) is used by the square style, "roundGlyph" by the rounded one.
+    readonly property var issueStates: [
+        { key: "new", label: i18n("New"), glyph: "plus", roundGlyph: "plus", color: Plasmoid.configuration.colorNew,
+          inPanel: Plasmoid.configuration.showNewInPanel },
+        { key: "open", label: i18n("Open"), glyph: "exclamation", roundGlyph: "exclamation", color: Plasmoid.configuration.colorOpen,
+          inPanel: Plasmoid.configuration.showOpenInPanel },
+        { key: "muted", label: i18n("Muted"), glyph: "muted", roundGlyph: "muted", color: Plasmoid.configuration.colorMuted,
+          inPanel: Plasmoid.configuration.showMutedInPanel },
+        { key: "resolved", label: i18n("Resolved"), glyph: "check", roundGlyph: "check", color: Plasmoid.configuration.colorResolved,
+          inPanel: Plasmoid.configuration.showResolvedInPanel },
     ]
-    readonly property var visibleStates: sensorStates.filter(st => (stateCounts[st.key] || 0) > 0)
+
+    function isNew(issue) {
+        return Date.now() - new Date(issue.first_seen).getTime() < newWithinHours * 3600 * 1000
+    }
+
+    readonly property var stateCounts: {
+        const counts = { new: 0, open: 0, muted: 0, resolved: 0 }
+        projects.forEach(p => {
+            p.open.forEach(i => counts[isNew(i) ? "new" : "open"]++)
+            counts.muted += p.muted
+            counts.resolved += p.resolved
+        })
+        return counts
+    }
+    readonly property int totalIssues: stateCounts.new + stateCounts.open + stateCounts.muted + stateCounts.resolved
+    readonly property int openCount: stateCounts.new + stateCounts.open
+    readonly property bool truncated: projects.some(p => p.truncated)
+    readonly property var visibleStates: issueStates.filter(st => (stateCounts[st.key] || 0) > 0)
     // Badges (in the panel, the popup and on the desktop) show the states switched on in the
     // settings, optionally including empty ones.
-    readonly property var panelStates: sensorStates.filter(st => st.inPanel
+    readonly property var panelStates: issueStates.filter(st => st.inPanel
         && (Plasmoid.configuration.showZeroInPanel || (stateCounts[st.key] || 0) > 0))
-    readonly property int totalSensors: Object.values(stateCounts).reduce((sum, n) => sum + n, 0)
+    // Projects with open issues, most recently active first.
+    readonly property var activeProjects: projects.filter(p => p.open.length > 0)
+        .sort((a, b) => new Date(b.open[0].last_seen) - new Date(a.open[0].last_seen))
+
+    function stateOf(key) {
+        return issueStates.find(st => st.key === key)
+    }
 
     // White or near-black, whichever reads better on the given background colour.
     function contrastText(background) {
         const c = Qt.color(background)
         return 0.299 * c.r + 0.587 * c.g + 0.114 * c.b > 0.6 ? "#202020" : "white"
     }
-
-    function stateColor(key) {
-        return sensorStates.find(st => st.key === key).color
-    }
-
-    readonly property color downColor: stateColor("down")
-    readonly property color warningColor: stateColor("warning")
-    readonly property color unusualColor: stateColor("unusual")
 
     function shellQuote(s) {
         return "'" + s.replace(/'/g, "'\\''") + "'"
@@ -81,92 +86,118 @@ PlasmoidItem {
         if (!serverUrl) {
             return
         }
-        loading = true
-        executable.exec("sh " + shellQuote(scriptPath) + " " + shellQuote(serverUrl))
+        fetcher.connectSource("python3 -I " + shellQuote(scriptPath) + " fetch " + shellQuote(serverUrl)
+            + " " + Plasmoid.configuration.maxPages)
     }
 
-    function sensorUrl(sensor) {
-        return serverUrl + "/sensor.htm?id=" + sensor.objid
+    function runAction(issue, action) {
+        const busy = Object.assign({}, busyIds)
+        busy[issue.id] = true
+        busyIds = busy
+        actionError = ""
+        actions.connectSource("python3 -I " + shellQuote(scriptPath) + " " + action + " " + shellQuote(serverUrl)
+            + " " + shellQuote(issue.id))
+    }
+
+    function issueUrl(issue) {
+        return serverUrl + "/issues/issue/" + issue.id + "/event/last/"
+    }
+
+    function issueTitle(issue) {
+        return [issue.calculated_type, issue.calculated_value].filter(t => t).join(": ") || i18n("(no message)")
+    }
+
+    function relativeTime(iso) {
+        const minutes = Math.round((Date.now() - new Date(iso).getTime()) / 60000)
+        if (minutes < 60) return i18np("%1 minute ago", "%1 minutes ago", Math.max(minutes, 1))
+        const hours = Math.round(minutes / 60)
+        if (hours < 24) return i18np("%1 hour ago", "%1 hours ago", hours)
+        return i18np("%1 day ago", "%1 days ago", Math.round(hours / 24))
     }
 
     function apply(data) {
-        const counts = {}
-        data.all.sensors.forEach(s => {
-            const st = sensorStates.find(st => st.codes.includes(s.status_raw)) || sensorStates[sensorStates.length - 1]
-            counts[st.key] = (counts[st.key] || 0) + 1
-        })
-        stateCounts = counts
-
-        const sensors = data.problems.sensors
-        down = sensors.filter(s => s.status_raw === 5 || s.status_raw === 14)
-        acknowledged = sensors.filter(s => s.status_raw === 13)
-        warning = sensors.filter(s => s.status_raw === 4)
-        unusual = sensors.filter(s => s.status_raw === 10)
+        projects = data.projects
         loaded = true
-        notifyAboutNewDown()
+        notifyAboutNew()
     }
 
-    function notifyAboutNewDown() {
-        const fresh = down.filter(s => seenDownIds && !seenDownIds[s.objid])
+    function notifyAboutNew() {
+        const open = []
+        projects.forEach(p => p.open.forEach(i => open.push({ issue: i, project: p.name })))
+        const fresh = open.filter(o => seenIssueIds && !seenIssueIds[o.issue.id])
         const seen = {}
-        down.forEach(s => seen[s.objid] = true)
-        seenDownIds = seen
+        open.forEach(o => seen[o.issue.id] = true)
+        // Keep remembering earlier issues, so one that's resolved and reopened isn't "new" again.
+        if (seenIssueIds) {
+            Object.keys(seenIssueIds).forEach(id => seen[id] = true)
+        }
+        seenIssueIds = seen
 
-        if (fresh.length === 0 || !Plasmoid.configuration.notifyOnDown) {
+        if (fresh.length === 0 || !Plasmoid.configuration.notifyOnNew) {
             return
         }
         if (fresh.length === 1) {
-            downNotification.title = i18n("PRTG: %1 is down", fresh[0].sensor)
-            downNotification.text = fresh[0].device + (fresh[0].message_raw ? "\n" + fresh[0].message_raw : "")
+            newIssueNotification.title = i18n("Bugsink: new issue in %1", fresh[0].project)
+            newIssueNotification.text = issueTitle(fresh[0].issue)
         } else {
-            downNotification.title = i18np("PRTG: %1 sensor went down", "PRTG: %1 sensors went down", fresh.length)
-            downNotification.text = fresh.slice(0, 4).map(s => s.device + " – " + s.sensor).join("\n")
+            newIssueNotification.title = i18np("Bugsink: %1 new issue", "Bugsink: %1 new issues", fresh.length)
+            newIssueNotification.text = fresh.slice(0, 4).map(o => o.project + " – " + issueTitle(o.issue)).join("\n")
         }
-        downNotification.sendEvent()
+        newIssueNotification.sendEvent()
     }
 
     onServerUrlChanged: {
         loaded = false
-        seenDownIds = null
+        projects = []
+        seenIssueIds = null
         errorText = ""
         refresh()
     }
 
     P5Support.DataSource {
-        id: executable
+        id: fetcher
         engine: "executable"
         connectedSources: []
 
-        function exec(cmd) {
-            connectSource(cmd)
-        }
-
         onNewData: (sourceName, data) => {
             disconnectSource(sourceName)
-            root.loading = false
             root.lastChecked = new Date()
             if (data["exit code"] !== 0) {
-                const stderr = data["stderr"].trim()
-                root.errorText = stderr.includes("error: 401")
-                    ? i18n("PRTG rejected the API key (401). Check the key stored in your keyring.")
-                    : stderr || i18n("Fetch failed with code %1", data["exit code"])
+                root.errorText = data["stderr"].trim() || i18n("Fetch failed with code %1", data["exit code"])
                 return
             }
             try {
                 root.apply(JSON.parse(data["stdout"]))
                 root.errorText = ""
             } catch (e) {
-                root.errorText = i18n("Could not read PRTG response: %1", e.message)
+                root.errorText = i18n("Could not read Bugsink response: %1", e.message)
             }
         }
     }
 
+    P5Support.DataSource {
+        id: actions
+        engine: "executable"
+        connectedSources: []
+
+        onNewData: (sourceName, data) => {
+            disconnectSource(sourceName)
+            const id = sourceName.split(" ").pop().replace(/'/g, "")
+            const busy = Object.assign({}, root.busyIds)
+            delete busy[id]
+            root.busyIds = busy
+            if (data["exit code"] !== 0) {
+                root.actionError = data["stderr"].trim() || i18n("The change failed with code %1", data["exit code"])
+            }
+            root.refresh()
+        }
+    }
+
     Notification {
-        id: downNotification
+        id: newIssueNotification
         componentName: "plasma_workspace"
         eventId: "notification"
-        iconName: "network-server"
-        urgency: Notification.HighUrgency
+        iconName: "tools-report-bug"
     }
 
     Timer {
@@ -177,24 +208,17 @@ PlasmoidItem {
         onTriggered: root.refresh()
     }
 
-    Plasmoid.icon: "network-server"
-    Plasmoid.status: down.length > 0 ? PlasmaCore.Types.NeedsAttentionStatus : PlasmaCore.Types.ActiveStatus
+    Plasmoid.icon: "tools-report-bug"
+    Plasmoid.status: stateCounts.new > 0 ? PlasmaCore.Types.NeedsAttentionStatus : PlasmaCore.Types.ActiveStatus
 
-    toolTipMainText: i18n("PRTG Status")
+    toolTipMainText: i18n("Bugsink")
     toolTipSubText: {
         if (!serverUrl) return i18n("No server configured")
         if (errorText) return errorText
         if (!loaded) return i18n("Loading…")
-        if (visibleStates.length > 0) {
-            return visibleStates.map(st => i18n("%1 %2", stateCounts[st.key], st.label.toLowerCase())).join(" · ")
-        }
-        if (allGood) return i18n("All sensors OK")
-        return [
-            i18n("%1 down", down.length),
-            i18n("%1 warning", warning.length),
-            i18n("%1 unusual", unusual.length),
-            i18n("%1 acknowledged", acknowledged.length),
-        ].join(" · ")
+        if (totalIssues === 0) return i18n("No issues")
+        return visibleStates.map(st => i18n("%1 %2", stateCounts[st.key], st.label.toLowerCase())).join(" · ")
+            + (truncated ? "\n" + i18n("Counts cover the most recently seen issues per project.") : "")
     }
 
     switchWidth: Kirigami.Units.gridUnit * 14
@@ -208,10 +232,10 @@ PlasmoidItem {
             onTriggered: root.refresh()
         },
         PlasmaCore.Action {
-            text: i18n("Open PRTG Alarms")
+            text: i18n("Open Bugsink")
             icon.name: "internet-web-browser"
             enabled: root.serverUrl !== ""
-            onTriggered: Qt.openUrlExternally(root.serverUrl + "/alarms.htm")
+            onTriggered: Qt.openUrlExternally(root.serverUrl + "/")
         }
     ]
 
@@ -230,6 +254,8 @@ PlasmoidItem {
         stop: { fill: "M 31 31 L 69 31 L 69 69 L 31 69 Z" },
         play: { fill: "M 36 25 L 76 50 L 36 75 Z" },
         restart: { stroke: "M 71 40 A 23 23 0 1 0 73 58", fill: "M 60 26 L 82 28 L 74 48 Z" },
+        plus: { stroke: "M 50 26 L 50 74 M 26 50 L 74 50" },
+        muted: { fill: "M 18 40 L 32 40 L 50 24 L 50 76 L 32 60 L 18 60 Z", stroke: "M 62 40 L 80 60 M 80 40 L 62 60" },
         gear: { stroke: "M 50 34 A 16 16 0 1 1 49.9 34 M 50 14 L 50 24 M 50 76 L 50 86 M 14 50 L 24 50 M 76 50 L 86 50 M 25 25 L 32 32 M 68 68 L 75 75 M 75 25 L 68 32 M 25 75 L 32 68" },
     })
 
@@ -263,10 +289,10 @@ PlasmoidItem {
         }
     }
 
-    // A PRTG-style status badge: the state's symbol on a block of its colour, then the count.
-    // Square style matches PRTG's classic status bar; rounded style its newer pill-shaped one.
+    // A status badge: the state's symbol on a block of its colour, then the count.
+    // Square or rounded (pill-shaped), as chosen under Appearance.
     component StatusBadge: Rectangle {
-        property var sensorState
+        property var issueState
         property int count
         property real size
         readonly property bool rounded: Plasmoid.configuration.badgeStyle === "rounded"
@@ -276,44 +302,21 @@ PlasmoidItem {
         radius: rounded ? height / 2 : 2
         color: Plasmoid.configuration.colorCountBackground
         border.width: rounded ? 1.5 : 1
-        border.color: sensorState.color
+        border.color: issueState.color
 
         Rectangle {
             id: glyphBlock
             width: parent.size
             height: parent.size
             radius: parent.rounded ? width / 2 : 2
-            color: sensorState.color
+            color: issueState.color
 
             Glyph {
                 anchors.centerIn: parent
                 width: parent.width * 0.7
                 height: width
-                kind: parent.parent.rounded ? sensorState.roundGlyph : sensorState.glyph
-                color: root.contrastText(sensorState.color)
-            }
-
-            // The small green tick PRTG adds to acknowledged alarms (rounded style).
-            Rectangle {
-                visible: parent.parent.rounded && sensorState.check === true
-                width: parent.width * 0.5
-                height: width
-                radius: width / 2
-                anchors.right: parent.right
-                anchors.bottom: parent.bottom
-                anchors.rightMargin: -width * 0.2
-                anchors.bottomMargin: -width * 0.15
-                color: Plasmoid.configuration.colorUp
-                border.width: 1
-                border.color: Plasmoid.configuration.colorCountBackground
-
-                Glyph {
-                    anchors.centerIn: parent
-                    width: parent.width * 0.8
-                    height: width
-                    kind: "check"
-                    color: root.contrastText(Plasmoid.configuration.colorUp)
-                }
+                kind: parent.parent.rounded ? issueState.roundGlyph : issueState.glyph
+                color: root.contrastText(issueState.color)
             }
         }
 
@@ -348,7 +351,7 @@ PlasmoidItem {
             model: bar.badgeStates
             StatusBadge {
                 required property var modelData
-                sensorState: modelData
+                issueState: modelData
                 count: root.stateCounts[modelData.key] || 0
                 size: bar.badgeSize
             }
@@ -356,7 +359,7 @@ PlasmoidItem {
 
         PlasmaComponents.Label {
             visible: bar.showTotal
-            text: i18n("(of %1)", root.totalSensors)
+            text: i18n("(of %1)", root.totalIssues)
             font.pixelSize: bar.badgeSize * 0.6
         }
     }
@@ -405,13 +408,15 @@ PlasmoidItem {
         }
     }
 
-    // One sensor in the popup: status dot, "device – sensor" and the PRTG message.
-    component SensorRow: PlasmaComponents.ItemDelegate {
-        property var sensor
-        property color dotColor
+    // One open issue in the popup: state dot, title, details, and resolve/mute buttons.
+    component IssueRow: PlasmaComponents.ItemDelegate {
+        id: row
+        property var issue
+        readonly property bool busy: root.busyIds[issue.id] === true
+        readonly property bool fresh: root.isNew(issue)
 
         Layout.fillWidth: true
-        onClicked: Qt.openUrlExternally(root.sensorUrl(sensor))
+        onClicked: Qt.openUrlExternally(root.issueUrl(issue))
 
         contentItem: RowLayout {
             spacing: Kirigami.Units.smallSpacing
@@ -422,7 +427,7 @@ PlasmoidItem {
                 Layout.alignment: Qt.AlignTop
                 Layout.topMargin: Kirigami.Units.smallSpacing
                 radius: width / 2
-                color: dotColor
+                color: root.stateOf(row.fresh ? "new" : "open").color
             }
 
             ColumnLayout {
@@ -430,52 +435,53 @@ PlasmoidItem {
                 spacing: 0
                 PlasmaComponents.Label {
                     Layout.fillWidth: true
-                    text: sensor.device + " – " + sensor.sensor
+                    text: root.issueTitle(row.issue)
+                    font.bold: row.fresh
                     elide: Text.ElideRight
                 }
                 PlasmaComponents.Label {
                     Layout.fillWidth: true
-                    text: [sensor.lastvalue, sensor.message_raw].filter(t => t && t !== "-").join(" · ")
-                    visible: text !== ""
+                    text: [row.issue.transaction,
+                           i18np("%1 event", "%1 events", row.issue.digested_event_count || 0),
+                           i18n("last seen %1", root.relativeTime(row.issue.last_seen))].filter(t => t).join(" · ")
                     opacity: 0.7
                     font: Kirigami.Theme.smallFont
-                    wrapMode: Text.WordWrap
-                    maximumLineCount: 2
                     elide: Text.ElideRight
                 }
             }
-        }
-    }
 
-    // A section header plus its sensors; hidden when the group is empty.
-    component SensorGroup: ColumnLayout {
-        id: group
-        property string title
-        property var sensors: []
-        property color dotColor
+            PlasmaComponents.BusyIndicator {
+                Layout.preferredWidth: Kirigami.Units.iconSizes.small
+                Layout.preferredHeight: Kirigami.Units.iconSizes.small
+                visible: row.busy
+                running: visible
+            }
 
-        Layout.fillWidth: true
-        spacing: 0
-        visible: sensors.length > 0
-
-        Kirigami.ListSectionHeader {
-            Layout.fillWidth: true
-            text: i18n("%1 (%2)", title, sensors.length)
-        }
-        Repeater {
-            model: sensors
-            SensorRow {
-                required property var modelData
-                sensor: modelData
-                dotColor: group.dotColor
+            PlasmaComponents.ToolButton {
+                visible: !row.busy
+                icon.name: "checkmark"
+                display: PlasmaComponents.AbstractButton.IconOnly
+                text: i18n("Resolve")
+                onClicked: root.runAction(row.issue, "resolve")
+                PlasmaComponents.ToolTip.text: text
+                PlasmaComponents.ToolTip.visible: hovered
+            }
+            PlasmaComponents.ToolButton {
+                visible: !row.busy
+                icon.name: "audio-volume-muted"
+                display: PlasmaComponents.AbstractButton.IconOnly
+                text: i18n("Mute")
+                onClicked: root.runAction(row.issue, "mute")
+                PlasmaComponents.ToolTip.text: text
+                PlasmaComponents.ToolTip.visible: hovered
             }
         }
     }
 
     fullRepresentation: PlasmaExtras.Representation {
-        Layout.minimumWidth: Kirigami.Units.gridUnit * 18
+        Layout.minimumWidth: Kirigami.Units.gridUnit * 20
         Layout.minimumHeight: Kirigami.Units.gridUnit * 12
-        Layout.preferredWidth: Kirigami.Units.gridUnit * 24
+        Layout.preferredWidth: Kirigami.Units.gridUnit * 26
         Layout.preferredHeight: Kirigami.Units.gridUnit * 26
 
         collapseMarginsHint: true
@@ -488,16 +494,16 @@ PlasmoidItem {
                 PlasmaExtras.Heading {
                     Layout.fillWidth: true
                     level: 3
-                    text: root.serverUrl ? root.serverUrl.replace(/^https?:\/\//, "") : i18n("PRTG Status")
+                    text: root.serverUrl ? root.serverUrl.replace(/^https?:\/\//, "") : i18n("Bugsink")
                     elide: Text.ElideRight
                 }
 
                 PlasmaComponents.ToolButton {
                     icon.name: "internet-web-browser"
                     display: PlasmaComponents.AbstractButton.IconOnly
-                    text: i18n("Open PRTG alarms")
+                    text: i18n("Open Bugsink")
                     enabled: root.serverUrl !== ""
-                    onClicked: Qt.openUrlExternally(root.serverUrl + "/alarms.htm")
+                    onClicked: Qt.openUrlExternally(root.serverUrl + "/")
                     PlasmaComponents.ToolTip.text: text
                     PlasmaComponents.ToolTip.visible: hovered
                 }
@@ -506,7 +512,7 @@ PlasmoidItem {
                     icon.name: "view-refresh"
                     display: PlasmaComponents.AbstractButton.IconOnly
                     text: i18n("Refresh")
-                    enabled: root.serverUrl !== "" && !root.loading
+                    enabled: root.serverUrl !== ""
                     onClicked: root.refresh()
                     PlasmaComponents.ToolTip.text: text
                     PlasmaComponents.ToolTip.visible: hovered
@@ -541,7 +547,7 @@ PlasmoidItem {
             width: parent.width - Kirigami.Units.gridUnit * 2
             visible: !root.serverUrl
             iconName: "configure"
-            text: i18n("No PRTG server configured")
+            text: i18n("No Bugsink server configured")
             helpfulAction: QQC2.Action {
                 text: i18n("Configure…")
                 icon.name: "configure"
@@ -554,16 +560,16 @@ PlasmoidItem {
             width: parent.width - Kirigami.Units.gridUnit * 2
             visible: root.serverUrl !== "" && root.errorText !== "" && !root.loaded
             iconName: "dialog-error"
-            text: i18n("Could not reach PRTG")
+            text: i18n("Could not reach Bugsink")
             explanation: root.errorText
         }
 
         PlasmaExtras.PlaceholderMessage {
             anchors.centerIn: parent
             width: parent.width - Kirigami.Units.gridUnit * 2
-            visible: root.allGood && root.acknowledged.length === 0
+            visible: root.loaded && root.openCount === 0
             iconName: "checkmark"
-            text: i18n("All sensors OK")
+            text: i18n("No open issues")
         }
 
         PlasmaComponents.ScrollView {
@@ -571,7 +577,7 @@ PlasmoidItem {
             anchors.fill: parent
             // Long titles are elided instead of making the list scroll sideways.
             contentWidth: availableWidth
-            visible: root.loaded && !(root.allGood && root.acknowledged.length === 0)
+            visible: root.loaded && root.openCount > 0
 
             ColumnLayout {
                 width: scroll.availableWidth
@@ -580,15 +586,33 @@ PlasmoidItem {
                 Kirigami.InlineMessage {
                     Layout.fillWidth: true
                     Layout.margins: Kirigami.Units.smallSpacing
-                    visible: root.errorText !== ""
+                    visible: root.errorText !== "" || root.actionError !== ""
                     type: Kirigami.MessageType.Warning
-                    text: root.errorText
+                    text: root.actionError || root.errorText
                 }
 
-                SensorGroup { title: i18n("Down"); sensors: root.down; dotColor: root.downColor }
-                SensorGroup { title: i18n("Warning"); sensors: root.warning; dotColor: root.warningColor }
-                SensorGroup { title: i18n("Unusual"); sensors: root.unusual; dotColor: root.unusualColor }
-                SensorGroup { title: i18n("Acknowledged"); sensors: root.acknowledged; dotColor: Kirigami.Theme.disabledTextColor }
+                Repeater {
+                    model: root.activeProjects
+
+                    ColumnLayout {
+                        id: group
+                        required property var modelData
+                        Layout.fillWidth: true
+                        spacing: 0
+
+                        Kirigami.ListSectionHeader {
+                            Layout.fillWidth: true
+                            text: i18n("%1 (%2 open)", group.modelData.name, group.modelData.open.length)
+                        }
+                        Repeater {
+                            model: group.modelData.open
+                            IssueRow {
+                                required property var modelData
+                                issue: modelData
+                            }
+                        }
+                    }
+                }
             }
         }
     }

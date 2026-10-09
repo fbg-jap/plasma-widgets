@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<kcfg xmlns="http://www.kde.org/standards/kcfg/1.0"
+      xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+      xsi:schemaLocation="http://www.kde.org/standards/kcfg/1.0 http://www.kde.org/standards/kcfg/1.0/kcfg.xsd">
+  <kcfgfile name=""/>
+  <group name="General">
+    <entry name="serverUrl" type="String">
+      <label>Bugsink server address, e.g. https://bugsink.example.com</label>
+      <default></default>
+    </entry>
+    <entry name="pollInterval" type="Int">
+      <label>Minutes between checks</label>
+      <default>2</default>
+      <min>1</min>
+      <max>60</max>
+    </entry>
+    <entry name="maxPages" type="Int">
+      <label>Pages of issues to read per project (most recently seen first)</label>
+      <default>10</default>
+      <min>1</min>
+      <max>100</max>
+    </entry>
+    <entry name="showNewInPanel" type="Bool">
+      <label>Show the new (first seen in the last 24 hours) badge</label>
+      <default>true</default>
+    </entry>
+    <entry name="showOpenInPanel" type="Bool">
+      <label>Show the open badge</label>
+      <default>true</default>
+    </entry>
+    <entry name="showMutedInPanel" type="Bool">
+      <label>Show the muted badge</label>
+      <default>false</default>
+    </entry>
+    <entry name="showResolvedInPanel" type="Bool">
+      <label>Show the resolved badge</label>
+      <default>false</default>
+    </entry>
+    <entry name="showZeroInPanel" type="Bool">
+      <label>Show badges for states with no issues</label>
+      <default>false</default>
+    </entry>
+    <entry name="showTotalInPanel" type="Bool">
+      <label>Show the total number of issues after the badges</label>
+      <default>false</default>
+    </entry>
+    <entry name="notifyOnNew" type="Bool">
+      <label>Send a desktop notification for new issues</label>
+      <default>true</default>
+    </entry>
+  </group>
+  <group name="Appearance">
+    <entry name="badgeStyle" type="String">
+      <label>Badge style: square or rounded</label>
+      <default>square</default>
+    </entry>
+    <entry name="colorNew" type="Color">
+      <label>New badge colour</label>
+      <default>#d71920</default>
+    </entry>
+    <entry name="colorOpen" type="Color">
+      <label>Open badge colour</label>
+      <default>#ff9800</default>
+    </entry>
+    <entry name="colorMuted" type="Color">
+      <label>Muted badge colour</label>
+      <default>#8a8a8a</default>
+    </entry>
+    <entry name="colorResolved" type="Color">
+      <label>Resolved badge colour</label>
+      <default>#7ba700</default>
+    </entry>
+    <entry name="colorCountBackground" type="Color">
+      <label>Count background badge colour</label>
+      <default>#2b2f33</default>
+    </entry>
+  </group>
+</kcfg>

@@ -476,6 +476,8 @@ PlasmoidItem {
         PlasmaComponents.ScrollView {
             id: scroll
             anchors.fill: parent
+            // Long titles are elided instead of making the list scroll sideways.
+            contentWidth: availableWidth
             visible: root.login !== ""
 
             ColumnLayout {

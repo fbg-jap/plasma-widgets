@@ -1,6 +1,6 @@
 # Plasma Widgets
 
-KDE Plasma 6 widgets for keeping an eye on GitHub, PRTG and Docker from the panel or desktop.
+KDE Plasma 6 widgets for keeping an eye on GitHub, PRTG, Docker and Bugsink from the panel or desktop.
 
 | Widget | Id | Shows |
 |---|---|---|
@@ -8,6 +8,7 @@ KDE Plasma 6 widgets for keeping an eye on GitHub, PRTG and Docker from the pane
 | [GitHub Account](githubaccount) | `dk.madebypless.githubaccount` | Count badges for review requests, notifications, open PRs and CI; click for the full lists. One widget per account. |
 | [PRTG Status](prtgstatus) | `dk.madebypless.prtgstatus` | PRTG-style status badges (down, warning, unusual, paused, up…), with the problem sensors in a popup |
 | [Docker Status](dockerstatus) | `dk.madebypless.dockerstatus` | Status badges for your containers (failed, unhealthy, restarting, paused, stopped, running), with start / stop / restart per container |
+| [Bugsink Status](bugsinkstatus) | `dk.madebypless.bugsinkstatus` | Status badges for your Bugsink issues (new, open, muted, resolved), with the open issues per project and resolve / mute buttons |
 
 ## Screenshots
 
@@ -47,6 +48,16 @@ The same badges for your Docker containers. Click for every container, grouped b
 
 A container counts as **failed** when it exited with an error. Exiting normally or being stopped with `docker stop` counts as **stopped**. The settings let you pick the Docker context (e.g. a Podman machine or remote host), how often to check (default every 15 seconds), which states get a badge, the badge style and colours, and whether to notify you when a container fails or becomes unhealthy.
 
+### Bugsink Status
+
+Error tracking from a [Bugsink](https://www.bugsink.com/) server: badges for new (first seen in the last 24 hours), open, muted and resolved issues. Click for the open issues grouped by project. Click an issue to open it in Bugsink, or resolve or mute it from the popup:
+
+<img src="screenshots/bugsinkstatus-panel.png" width="212" alt="Bugsink Status in the panel: badges for 2 new, 2 open, 1 muted and 6 resolved issues">
+
+<img src="screenshots/bugsinkstatus-popup.png" width="468" alt="Bugsink Status popup: open issues grouped by project with error type and message, events and last seen, and resolve and mute buttons">
+
+Muted and resolved badges are off by default; switch them on under **Show badges**. Bugsink's API can't filter issues by status, so the widget reads each project's most recently seen issues (10 pages by default, adjustable) to count them.
+
 ## Install
 
 Download the widget's `.plasmoid` file from the [latest release](https://github.com/pless84/plasma-widgets/releases/latest). Then right-click the panel or desktop → **Add Widgets** → **Get New** → **Install Widget From Local File…**, or run:
@@ -72,6 +83,7 @@ To update after pulling changes, use `-u` instead of `-i`. A widget already on t
 - Plasma 6
 - **GitHub Account:** the [GitHub CLI](https://cli.github.com/) (`gh`), logged in with `gh auth login`. The widget uses its stored login and never handles a token itself. It can show any account `gh` is logged in to, picked in its settings, so you can add one widget per account. Run `gh auth login` again to add more accounts.
 - **PRTG Status:** `curl` and `secret-tool` (libsecret), and PRTG 22.2 or newer for API keys.
+- **Bugsink Status:** `python3` and `secret-tool` (libsecret), and a Bugsink API token. Create one in Bugsink under Tokens (`/bsmain/auth_tokens/`), paste it into the widget's settings and click **Save to Keyring**.
 - **Docker Status:** the `docker` CLI with access to the daemon (e.g. your user in the `docker` group). Any `docker context` works, including Podman.
 
 ## PRTG setup

@@ -6,13 +6,13 @@
                 "Email": "pless84@gmail.com"
             }
         ],
-        "Category": "Online Services",
-        "Description": "Shows the current status of GitHub services from githubstatus.com",
-        "Icon": "vcs-branch",
-        "Id": "dk.madebypless.githubstatus",
+        "Category": "System Information",
+        "Description": "Bugsink error tracking: new, open, muted and resolved issues as status badges, with resolve and mute per issue",
+        "Icon": "tools-report-bug",
+        "Id": "dk.madebypless.bugsinkstatus",
         "License": "GPL-2.0-or-later",
-        "Name": "GitHub Status",
-        "Version": "1.3",
+        "Name": "Bugsink Status",
+        "Version": "1.0",
         "Website": "https://github.com/pless84/plasma-widgets",
         "BugReportUrl": "https://github.com/pless84/plasma-widgets/issues"
     },
