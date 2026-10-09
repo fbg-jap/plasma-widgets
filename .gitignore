@@ -1,1 +1,5 @@
 .omc/
+tray/.venv/
+tray/build/
+tray/dist/
+__pycache__/

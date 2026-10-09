@@ -2,6 +2,8 @@
 
 KDE Plasma 6 widgets for keeping an eye on GitHub, PRTG, Docker, Bugsink and Dokploy from the panel or desktop.
 
+**Not on KDE Plasma?** The [Status Badges tray app](tray/) brings the same badges to Windows, macOS and any Linux desktop with a system tray.
+
 | Widget | Id | Shows |
 |---|---|---|
 | [GitHub Status](githubstatus) | `dk.madebypless.githubstatus` | GitHub's service health from githubstatus.com as status badges per component state, with active incidents |

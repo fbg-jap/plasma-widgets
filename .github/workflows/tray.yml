@@ -1,0 +1,102 @@
+name: Tray app
+
+on:
+  push:
+    branches: [main]
+    paths: ["tray/**", ".github/workflows/tray.yml"]
+    tags: ["tray-v*"]
+  pull_request:
+    paths: ["tray/**", ".github/workflows/tray.yml"]
+  workflow_dispatch:
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { os: windows-latest, artifact: StatusBadges-windows }
+          - { os: macos-latest, artifact: StatusBadges-macos }
+          - { os: ubuntu-22.04, artifact: StatusBadges-linux }
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        working-directory: tray
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install Linux libraries for Qt
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y libegl1 libxkbcommon-x11-0 libxcb-cursor0 libxcb-icccm4 libxcb-keysyms1 libxcb-shape0 libdbus-1-3 libfontconfig1
+
+      - name: Install dependencies
+        run: python -m pip install --upgrade pip && pip install . pyinstaller pillow
+
+      - name: Build
+        run: pyinstaller --noconfirm statusbadges.spec
+
+      - name: Smoke test (start offscreen and render the popup)
+        env:
+          QT_QPA_PLATFORM: offscreen
+          STATUS_BADGES_CONFIG: ${{ github.workspace }}/smoke/config.json
+          STATUS_BADGES_SNAPSHOT: ${{ github.workspace }}/smoke/shot
+          STATUS_BADGES_SNAPSHOT_DELAY: "6000"
+        run: |
+          mkdir -p ../smoke
+          echo '{"widgets": [{"id": "s1", "kind": "githubstatus", "name": "GitHub Status", "interval": 300}]}' > ../smoke/config.json
+          case "$RUNNER_OS" in
+            Windows) BIN=dist/StatusBadges/StatusBadges.exe ;;
+            macOS)   BIN=dist/StatusBadges.app/Contents/MacOS/StatusBadges ;;
+            *)       BIN=dist/StatusBadges/StatusBadges ;;
+          esac
+          "$BIN" &
+          PID=$!
+          for i in $(seq 1 60); do [ -f ../smoke/shot-popup.png ] && break; sleep 1; done
+          kill $PID 2>/dev/null || true
+          ls -la ../smoke
+          test -s ../smoke/shot-popup.png
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: smoke-${{ matrix.artifact }}
+          path: smoke/*.png
+
+      - name: Package
+        run: |
+          mkdir -p ../out
+          if [ "$RUNNER_OS" = "macOS" ]; then
+            ditto -c -k --keepParent dist/StatusBadges.app ../out/${{ matrix.artifact }}.zip
+          elif [ "$RUNNER_OS" = "Windows" ]; then
+            7z a ../out/${{ matrix.artifact }}.zip ./dist/StatusBadges/*
+          else
+            tar -C dist -czf ../out/${{ matrix.artifact }}.tar.gz StatusBadges
+          fi
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact }}
+          path: out/*
+
+  release:
+    if: startsWith(github.ref, 'refs/tags/tray-v')
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: StatusBadges-*
+          merge-multiple: true
+      - name: Create release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" StatusBadges-* --repo "$GITHUB_REPOSITORY" \
+            --title "Status Badges ${GITHUB_REF_NAME#tray-v}" \
+            --notes "Cross-platform tray app with status badges for GitHub, PRTG, Docker, Bugsink and Dokploy. Download the file for your system, unpack it and run StatusBadges."
