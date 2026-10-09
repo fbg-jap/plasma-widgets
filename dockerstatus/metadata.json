@@ -7,12 +7,12 @@
             }
         ],
         "Category": "System Information",
-        "Description": "Down, warning and unusual sensors from a PRTG Network Monitor server",
-        "Icon": "network-server",
-        "Id": "dk.madebypless.prtgstatus",
+        "Description": "Docker container states as status badges, with start, stop and restart per container",
+        "Icon": "folder-docker",
+        "Id": "dk.madebypless.dockerstatus",
         "License": "GPL-2.0-or-later",
-        "Name": "PRTG Status",
-        "Version": "1.7",
+        "Name": "Docker Status",
+        "Version": "1.0",
         "Website": "https://github.com/pless84/plasma-widgets",
         "BugReportUrl": "https://github.com/pless84/plasma-widgets/issues"
     },

@@ -444,21 +444,22 @@ PlasmoidItem {
             }
         }
 
-        footer: RowLayout {
-            spacing: Kirigami.Units.smallSpacing
+        footer: ColumnLayout {
+            spacing: 0
 
             BadgeBar {
                 Layout.margins: Kirigami.Units.smallSpacing
+                Layout.bottomMargin: 0
                 visible: root.login !== ""
-                badgeSize: Kirigami.Units.iconSizes.smallMedium
+                badgeSize: Kirigami.Units.iconSizes.small * 1.25
             }
 
             PlasmaComponents.Label {
                 Layout.fillWidth: true
                 Layout.margins: Kirigami.Units.smallSpacing
-                horizontalAlignment: Text.AlignRight
                 opacity: 0.7
                 font: Kirigami.Theme.smallFont
+                elide: Text.ElideRight
                 text: isNaN(root.lastChecked) ? "" : i18n("Last checked %1", root.lastChecked.toLocaleTimeString(Qt.locale(), Locale.ShortFormat))
             }
         }

@@ -1,12 +1,13 @@
 # Plasma Widgets
 
-KDE Plasma 6 widgets for keeping an eye on GitHub and PRTG from the panel or desktop.
+KDE Plasma 6 widgets for keeping an eye on GitHub, PRTG and Docker from the panel or desktop.
 
 | Widget | Id | Shows |
 |---|---|---|
 | [GitHub Status](githubstatus) | `dk.madebypless.githubstatus` | GitHub's service health from githubstatus.com, with active incidents |
 | [GitHub Account](githubaccount) | `dk.madebypless.githubaccount` | Count badges for review requests, notifications, open PRs and CI; click for the full lists. One widget per account. |
 | [PRTG Status](prtgstatus) | `dk.madebypless.prtgstatus` | PRTG-style status badges (down, warning, unusual, paused, up…), with the problem sensors in a popup |
+| [Docker Status](dockerstatus) | `dk.madebypless.dockerstatus` | Status badges for your containers (failed, unhealthy, restarting, paused, stopped, running), with start / stop / restart per container |
 
 ## Screenshots
 
@@ -30,11 +31,21 @@ The panel shows count badges for review requests, unread notifications, open pul
 
 ### PRTG Status
 
-The panel shows a badge per sensor state, like PRTG's own status bar. Under **Appearance** in the widget's settings you can switch to a rounded style like PRTG's newer interface and change every colour. In the General settings you can pick which states appear in the panel, show states with no sensors, and add the total (e.g. "(of 919)"). Click for the problem sensors:
+The panel shows a badge per sensor state, like PRTG's own status bar. Under **Appearance** in the widget's settings you can switch to a rounded style like PRTG's newer interface and change every colour. In the General settings you can pick which states get a badge (in the panel and the popup), show states with no sensors, and add the total (e.g. "(of 919)"). Click for the problem sensors:
 
 <img src="screenshots/prtgstatus-panel.png" width="324" alt="PRTG Status in the panel: badges for 1 down, 1 down acknowledged, 2 warning, 1 unusual, 42 paused and 873 up">
 
 <img src="screenshots/prtgstatus-popup.png" width="468" alt="PRTG Status popup: sensors grouped under Down, Warning, Unusual and Acknowledged, with the status badges along the bottom">
+
+### Docker Status
+
+The same badges for your Docker containers. Click for every container, grouped by Compose project, with start, stop and restart buttons:
+
+<img src="screenshots/dockerstatus-panel.png" width="302" alt="Docker Status in the panel: badges for 1 failed, 1 unhealthy, 1 restarting, 1 paused, 2 stopped and 3 running containers">
+
+<img src="screenshots/dockerstatus-popup.png" width="468" alt="Docker Status popup: containers grouped by Compose project with a state dot, image, status and ports, and start, stop and restart buttons">
+
+A container counts as **failed** when it exited with an error. Exiting normally or being stopped with `docker stop` counts as **stopped**. The settings let you pick the Docker context (e.g. a Podman machine or remote host), how often to check (default every 15 seconds), which states get a badge, the badge style and colours, and whether to notify you when a container fails or becomes unhealthy.
 
 ## Install
 
@@ -61,6 +72,7 @@ To update after pulling changes, use `-u` instead of `-i`. A widget already on t
 - Plasma 6
 - **GitHub Account:** the [GitHub CLI](https://cli.github.com/) (`gh`), logged in with `gh auth login`. The widget uses its stored login and never handles a token itself. It can show any account `gh` is logged in to, picked in its settings, so you can add one widget per account. Run `gh auth login` again to add more accounts.
 - **PRTG Status:** `curl` and `secret-tool` (libsecret), and PRTG 22.2 or newer for API keys.
+- **Docker Status:** the `docker` CLI with access to the daemon (e.g. your user in the `docker` group). Any `docker context` works, including Podman.
 
 ## PRTG setup
 

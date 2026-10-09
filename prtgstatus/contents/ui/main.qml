@@ -52,8 +52,8 @@ PlasmoidItem {
           inPanel: Plasmoid.configuration.showUpInPanel, codes: [3] },
     ]
     readonly property var visibleStates: sensorStates.filter(st => (stateCounts[st.key] || 0) > 0)
-    // The panel shows the states switched on in the settings, optionally including empty ones;
-    // the popup always shows every state that has sensors.
+    // Badges (in the panel, the popup and on the desktop) show the states switched on in the
+    // settings, optionally including empty ones.
     readonly property var panelStates: sensorStates.filter(st => st.inPanel
         && (Plasmoid.configuration.showZeroInPanel || (stateCounts[st.key] || 0) > 0))
     readonly property int totalSensors: Object.values(stateCounts).reduce((sum, n) => sum + n, 0)
@@ -465,21 +465,24 @@ PlasmoidItem {
             }
         }
 
-        footer: RowLayout {
-            spacing: Kirigami.Units.smallSpacing
+        footer: ColumnLayout {
+            spacing: 0
 
             BadgeBar {
                 Layout.margins: Kirigami.Units.smallSpacing
+                Layout.bottomMargin: 0
                 visible: root.loaded
-                badgeSize: Kirigami.Units.iconSizes.smallMedium
+                badgeSize: Kirigami.Units.iconSizes.small * 1.25
+                badgeStates: root.panelStates
+                showTotal: Plasmoid.configuration.showTotalInPanel
             }
 
             PlasmaComponents.Label {
                 Layout.fillWidth: true
                 Layout.margins: Kirigami.Units.smallSpacing
-                horizontalAlignment: Text.AlignRight
                 opacity: 0.7
                 font: Kirigami.Theme.smallFont
+                elide: Text.ElideRight
                 text: isNaN(root.lastChecked) ? "" : i18n("Last checked %1", root.lastChecked.toLocaleTimeString(Qt.locale(), Locale.ShortFormat))
             }
         }

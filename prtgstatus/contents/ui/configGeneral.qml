@@ -174,7 +174,7 @@ KCM.SimpleKCM {
 
         QQC2.CheckBox {
             id: showDownInPanel
-            Kirigami.FormData.label: i18n("Show in panel:")
+            Kirigami.FormData.label: i18n("Show badges:")
             text: i18n("Down")
         }
         QQC2.CheckBox {
