@@ -2,4 +2,5 @@
 tray/.venv/
 tray/build/
 tray/dist/
+tray/*.egg-info/
 __pycache__/
