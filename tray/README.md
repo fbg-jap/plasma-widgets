@@ -34,6 +34,8 @@ pip install .          # PySide6, keyring, platformdirs
 python -m statusbadges
 ```
 
+Run the unit tests with `pip install ".[test]"` and `python -m pytest`. They cover the providers with canned API and CLI responses, so they need no network, accounts or Docker.
+
 Build a standalone app with `pip install pyinstaller && pyinstaller statusbadges.spec`. The [Tray app workflow](../.github/workflows/tray.yml) builds Windows, macOS and Linux versions on every change and attaches them to a release when a `tray-v*` tag is pushed.
 
 Settings are stored in `config.json` in your config directory (`%APPDATA%\StatusBadges` on Windows, `~/Library/Application Support/StatusBadges` on macOS, `~/.config/StatusBadges` on Linux).
