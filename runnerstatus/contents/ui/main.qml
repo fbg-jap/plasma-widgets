@@ -251,6 +251,7 @@ PlasmoidItem {
         }
 
         PlasmaComponents.Label {
+            textFormat: Text.PlainText
             id: countLabel
             anchors.left: glyphBlock.right
             anchors.right: parent.right
@@ -297,6 +298,7 @@ PlasmoidItem {
         }
 
         PlasmaComponents.Label {
+            textFormat: Text.PlainText
             visible: bar.showTotal
             text: i18n("(of %1)", root.runners.length)
             font.pixelSize: bar.badgeSize * 0.6
@@ -384,6 +386,7 @@ PlasmoidItem {
                 }
 
                 PlasmaExtras.Heading {
+                    textFormat: Text.PlainText
                     Layout.fillWidth: true
                     level: 3
                     text: root.summary
@@ -426,6 +429,7 @@ PlasmoidItem {
 
             // The machine the runners live on.
             PlasmaComponents.Label {
+                textFormat: Text.PlainText
                 Layout.fillWidth: true
                 Layout.leftMargin: Kirigami.Units.smallSpacing
                 Layout.rightMargin: Kirigami.Units.smallSpacing
@@ -441,6 +445,7 @@ PlasmoidItem {
             }
 
             PlasmaComponents.Label {
+                textFormat: Text.PlainText
                 Layout.fillWidth: true
                 Layout.margins: Kirigami.Units.smallSpacing
                 opacity: 0.7
@@ -497,12 +502,14 @@ PlasmoidItem {
                                     color: root.stateColor(runnerItem.runnerState)
                                 }
                                 PlasmaComponents.Label {
+                                    textFormat: Text.PlainText
                                     Layout.fillWidth: true
                                     text: Logic.title(runnerItem.modelData)
                                     font.bold: true
                                     elide: Text.ElideRight
                                 }
                                 PlasmaComponents.Label {
+                                    textFormat: Text.PlainText
                                     text: root.stateLabel(runnerItem.runnerState)
                                     color: root.stateColor(runnerItem.runnerState)
                                 }
@@ -510,6 +517,7 @@ PlasmoidItem {
 
                             // The running job.
                             PlasmaComponents.Label {
+                                textFormat: Text.PlainText
                                 Layout.fillWidth: true
                                 visible: !!runnerItem.job
                                 elide: Text.ElideRight
@@ -521,6 +529,7 @@ PlasmoidItem {
 
                             // The last finished job.
                             PlasmaComponents.Label {
+                                textFormat: Text.PlainText
                                 Layout.fillWidth: true
                                 visible: !!runnerItem.last
                                 elide: Text.ElideRight
@@ -533,6 +542,7 @@ PlasmoidItem {
                             }
 
                             PlasmaComponents.Label {
+                                textFormat: Text.PlainText
                                 Layout.fillWidth: true
                                 elide: Text.ElideRight
                                 font: Kirigami.Theme.smallFont

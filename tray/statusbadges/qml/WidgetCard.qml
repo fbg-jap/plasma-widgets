@@ -37,6 +37,7 @@ Rectangle {
                 Label {
                     Layout.fillWidth: true
                     text: card.widget.name
+                    textFormat: Text.PlainText
                     font.bold: true
                     elide: Text.ElideRight
                 }
@@ -44,6 +45,7 @@ Rectangle {
                     Layout.fillWidth: true
                     visible: text !== ""
                     text: card.widget.summary + (card.widget.lastChecked ? "  ·  checked " + card.widget.lastChecked : "")
+                    textFormat: Text.PlainText
                     opacity: 0.65
                     font.pointSize: Qt.application.font.pointSize * 0.85
                     elide: Text.ElideRight
@@ -79,6 +81,7 @@ Rectangle {
             Layout.fillWidth: true
             visible: card.widget.error !== ""
             text: card.widget.error
+            textFormat: Text.PlainText
             color: "#d71920"
             wrapMode: Text.Wrap
         }
@@ -101,6 +104,7 @@ Rectangle {
                         Layout.fillWidth: true
                         Layout.topMargin: 6
                         text: section.modelData.title
+                        textFormat: Text.PlainText
                         font.bold: true
                         opacity: 0.75
                         elide: Text.ElideRight
@@ -150,6 +154,7 @@ Rectangle {
                                     Label {
                                         Layout.fillWidth: true
                                         text: row.modelData.title
+                                        textFormat: Text.PlainText   // names and titles come from the services
                                         font.bold: row.modelData.bold
                                         elide: Text.ElideRight
                                     }
@@ -157,6 +162,7 @@ Rectangle {
                                         Layout.fillWidth: true
                                         visible: text !== ""
                                         text: row.modelData.subtitle
+                                        textFormat: Text.PlainText
                                         opacity: 0.65
                                         font.pointSize: Qt.application.font.pointSize * 0.85
                                         elide: Text.ElideRight

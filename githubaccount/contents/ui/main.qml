@@ -247,6 +247,7 @@ PlasmoidItem {
         }
 
         PlasmaComponents.Label {
+            textFormat: Text.PlainText
             id: countLabel
             anchors.left: iconBlock.right
             anchors.right: parent.right
@@ -359,12 +360,14 @@ PlasmoidItem {
                 Layout.fillWidth: true
                 spacing: 0
                 PlasmaComponents.Label {
+                    textFormat: Text.PlainText
                     Layout.fillWidth: true
                     text: title
                     font.bold: bold
                     elide: Text.ElideRight
                 }
                 PlasmaComponents.Label {
+                    textFormat: Text.PlainText
                     Layout.fillWidth: true
                     text: subtitle
                     opacity: 0.7
@@ -389,6 +392,7 @@ PlasmoidItem {
                 spacing: Kirigami.Units.smallSpacing
 
                 PlasmaExtras.Heading {
+                    textFormat: Text.PlainText
                     Layout.fillWidth: true
                     level: 3
                     text: root.login ? "@" + root.login : i18n("GitHub Account")
@@ -437,6 +441,7 @@ PlasmoidItem {
             }
 
             PlasmaComponents.Label {
+                textFormat: Text.PlainText
                 Layout.fillWidth: true
                 Layout.margins: Kirigami.Units.smallSpacing
                 opacity: 0.7
@@ -512,6 +517,7 @@ PlasmoidItem {
                     }
                 }
                 PlasmaComponents.Label {
+                    textFormat: Text.PlainText
                     Layout.fillWidth: true
                     Layout.margins: Kirigami.Units.largeSpacing
                     visible: root.notifications.length === 0

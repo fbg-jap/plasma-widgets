@@ -307,6 +307,7 @@ PlasmoidItem {
         }
 
         PlasmaComponents.Label {
+            textFormat: Text.PlainText
             id: countLabel
             anchors.left: glyphBlock.right
             anchors.right: parent.right
@@ -353,6 +354,7 @@ PlasmoidItem {
         }
 
         PlasmaComponents.Label {
+            textFormat: Text.PlainText
             visible: bar.showTotal
             text: i18n("(of %1)", root.totalSensors)
             font.pixelSize: bar.badgeSize * 0.6
@@ -428,11 +430,13 @@ PlasmoidItem {
                 Layout.fillWidth: true
                 spacing: 0
                 PlasmaComponents.Label {
+                    textFormat: Text.PlainText
                     Layout.fillWidth: true
                     text: sensor.device + " – " + sensor.sensor
                     elide: Text.ElideRight
                 }
                 PlasmaComponents.Label {
+                    textFormat: Text.PlainText
                     Layout.fillWidth: true
                     text: [sensor.lastvalue, sensor.message_raw].filter(t => t && t !== "-").join(" · ")
                     visible: text !== ""
@@ -485,6 +489,7 @@ PlasmoidItem {
                 spacing: Kirigami.Units.smallSpacing
 
                 PlasmaExtras.Heading {
+                    textFormat: Text.PlainText
                     Layout.fillWidth: true
                     level: 3
                     text: root.serverUrl ? root.serverUrl.replace(/^https?:\/\//, "") : i18n("PRTG Status")
@@ -526,6 +531,7 @@ PlasmoidItem {
             }
 
             PlasmaComponents.Label {
+                textFormat: Text.PlainText
                 Layout.fillWidth: true
                 Layout.margins: Kirigami.Units.smallSpacing
                 opacity: 0.7

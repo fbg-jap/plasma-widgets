@@ -311,6 +311,7 @@ PlasmoidItem {
         }
 
         PlasmaComponents.Label {
+            textFormat: Text.PlainText
             id: countLabel
             anchors.left: glyphBlock.right
             anchors.right: parent.right
@@ -357,6 +358,7 @@ PlasmoidItem {
         }
 
         PlasmaComponents.Label {
+            textFormat: Text.PlainText
             visible: bar.showTotal
             text: i18n("(of %1)", root.totalIssues)
             font.pixelSize: bar.badgeSize * 0.6
@@ -434,12 +436,14 @@ PlasmoidItem {
                 Layout.fillWidth: true
                 spacing: 0
                 PlasmaComponents.Label {
+                    textFormat: Text.PlainText
                     Layout.fillWidth: true
                     text: root.issueTitle(row.issue)
                     font.bold: row.fresh
                     elide: Text.ElideRight
                 }
                 PlasmaComponents.Label {
+                    textFormat: Text.PlainText
                     Layout.fillWidth: true
                     text: [row.issue.shortId, row.issue.culprit,
                            i18np("%1 event", "%1 events", parseInt(row.issue.count) || 0),
@@ -493,6 +497,7 @@ PlasmoidItem {
                 spacing: Kirigami.Units.smallSpacing
 
                 PlasmaExtras.Heading {
+                    textFormat: Text.PlainText
                     Layout.fillWidth: true
                     level: 3
                     text: root.configured ? root.organization + " · " + root.serverUrl.replace(/^https?:\/\//, "") : i18n("Sentry")
@@ -534,6 +539,7 @@ PlasmoidItem {
             }
 
             PlasmaComponents.Label {
+                textFormat: Text.PlainText
                 Layout.fillWidth: true
                 Layout.margins: Kirigami.Units.smallSpacing
                 opacity: 0.7

@@ -270,6 +270,7 @@ PlasmoidItem {
         }
 
         PlasmaComponents.Label {
+            textFormat: Text.PlainText
             id: countLabel
             anchors.left: glyphBlock.right
             anchors.right: parent.right
@@ -316,6 +317,7 @@ PlasmoidItem {
         }
 
         PlasmaComponents.Label {
+            textFormat: Text.PlainText
             visible: bar.showTotal
             text: i18n("(of %1)", root.containers.length)
             font.pixelSize: bar.badgeSize * 0.6
@@ -398,12 +400,14 @@ PlasmoidItem {
                 Layout.fillWidth: true
                 spacing: 0
                 PlasmaComponents.Label {
+                    textFormat: Text.PlainText
                     Layout.fillWidth: true
                     text: row.container.name
                     font.bold: row.container.stateKey === "failed" || row.container.stateKey === "unhealthy"
                     elide: Text.ElideRight
                 }
                 PlasmaComponents.Label {
+                    textFormat: Text.PlainText
                     Layout.fillWidth: true
                     text: [row.container.image, row.container.status, row.container.ports].filter(t => t).join(" · ")
                     opacity: 0.7
@@ -463,6 +467,7 @@ PlasmoidItem {
                 spacing: Kirigami.Units.smallSpacing
 
                 PlasmaExtras.Heading {
+                    textFormat: Text.PlainText
                     Layout.fillWidth: true
                     level: 3
                     text: root.dockerContext ? i18n("Docker · %1", root.dockerContext) : i18n("Docker")
@@ -493,6 +498,7 @@ PlasmoidItem {
             }
 
             PlasmaComponents.Label {
+                textFormat: Text.PlainText
                 Layout.fillWidth: true
                 Layout.margins: Kirigami.Units.smallSpacing
                 opacity: 0.7

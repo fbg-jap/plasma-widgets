@@ -244,6 +244,7 @@ PlasmoidItem {
         }
 
         PlasmaComponents.Label {
+            textFormat: Text.PlainText
             id: countLabel
             anchors.left: glyphBlock.right
             anchors.right: parent.right
@@ -290,6 +291,7 @@ PlasmoidItem {
         }
 
         PlasmaComponents.Label {
+            textFormat: Text.PlainText
             visible: bar.showTotal
             text: i18n("(of %1)", root.components.length)
             font.pixelSize: bar.badgeSize * 0.6
@@ -377,6 +379,7 @@ PlasmoidItem {
                 }
 
                 PlasmaExtras.Heading {
+                    textFormat: Text.PlainText
                     Layout.fillWidth: true
                     level: 3
                     text: root.summary
@@ -417,6 +420,7 @@ PlasmoidItem {
             }
 
             PlasmaComponents.Label {
+                textFormat: Text.PlainText
                 Layout.fillWidth: true
                 Layout.margins: Kirigami.Units.smallSpacing
                 opacity: 0.7
@@ -458,6 +462,7 @@ PlasmoidItem {
                         contentItem: ColumnLayout {
                             spacing: 0
                             PlasmaComponents.Label {
+                                textFormat: Text.PlainText
                                 Layout.fillWidth: true
                                 text: modelData.name
                                 wrapMode: Text.WordWrap
@@ -465,6 +470,7 @@ PlasmoidItem {
                                 color: root.indicatorColor(modelData.impact === "none" ? "maintenance" : modelData.impact)
                             }
                             PlasmaComponents.Label {
+                                textFormat: Text.PlainText
                                 Layout.fillWidth: true
                                 text: i18n("%1 · updated %2", modelData.status, root.formatTime(modelData.updated_at))
                                 opacity: 0.7
@@ -498,11 +504,13 @@ PlasmoidItem {
                             color: root.componentColor(modelData.status)
                         }
                         PlasmaComponents.Label {
+                            textFormat: Text.PlainText
                             Layout.fillWidth: true
                             text: modelData.name
                             elide: Text.ElideRight
                         }
                         PlasmaComponents.Label {
+                            textFormat: Text.PlainText
                             text: root.componentLabel(modelData.status)
                             opacity: 0.7
                         }
