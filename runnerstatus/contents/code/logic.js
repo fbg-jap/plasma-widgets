@@ -50,9 +50,10 @@ function jobFailed(job) {
     return !!job && job.result !== "Succeeded" && job.result !== "Canceled" && job.result !== "Skipped"
 }
 
-// The running job's page on GitHub, or the repository's Actions page.
+// The running job's page on GitHub, or the repository's Actions page. The URL comes from the
+// dashboard (over plain http), so only http(s) links are opened, never file: or other schemes.
 function actionsUrl(runner) {
-    if (!runner.repo_url) {
+    if (!/^https?:\/\/[^\s]+$/i.test(runner.repo_url || "")) {
         return ""
     }
     const job = runner.job

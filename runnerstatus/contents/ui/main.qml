@@ -479,7 +479,7 @@ PlasmoidItem {
                         readonly property int problemCount: (modelData.problems || []).length
 
                         Layout.fillWidth: true
-                        onClicked: Qt.openUrlExternally(Logic.actionsUrl(modelData))
+                        onClicked: if (Logic.actionsUrl(modelData)) Qt.openUrlExternally(Logic.actionsUrl(modelData))
                         PlasmaComponents.ToolTip.text: Logic.actionsUrl(modelData)
                         PlasmaComponents.ToolTip.visible: hovered && PlasmaComponents.ToolTip.text !== ""
 

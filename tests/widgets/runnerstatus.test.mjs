@@ -57,6 +57,12 @@ test("actionsUrl links the running job, else the Actions page", () => {
     assert.equal(L.actionsUrl({}), "")
 })
 
+test("actionsUrl opens only http(s) links", () => {
+    assert.equal(L.actionsUrl({ repo_url: "file:///etc/passwd" }), "")
+    assert.equal(L.actionsUrl({ repo_url: "javascript:alert(1)" }), "")
+    assert.equal(L.actionsUrl({ repo_url: "https://github.com/o/r x" }), "")
+})
+
 test("formatDuration", () => {
     assert.equal(L.formatDuration(45.4), "45s")
     assert.equal(L.formatDuration(192), "3m 12s")
