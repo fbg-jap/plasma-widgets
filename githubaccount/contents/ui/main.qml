@@ -12,6 +12,8 @@ PlasmoidItem {
     id: root
 
     readonly property string scriptPath: Qt.resolvedUrl("../code/fetch.sh").toString().replace("file://", "")
+    // Which gh account to show; empty means gh's active account.
+    readonly property string account: Plasmoid.configuration.account.trim()
 
     property string login: ""
     property var notifications: []
@@ -69,9 +71,24 @@ PlasmoidItem {
         return i18np("%1 day ago", "%1 days ago", Math.round(hours / 24))
     }
 
+    function shellQuote(s) {
+        return "'" + s.replace(/'/g, "'\\''") + "'"
+    }
+
     function refresh(markRead) {
         loading = true
-        executable.exec("sh '" + scriptPath + "'" + (markRead ? " mark-read" : ""))
+        executable.exec("sh " + shellQuote(scriptPath) + " " + shellQuote(account) + (markRead ? " mark-read" : ""))
+    }
+
+    onAccountChanged: {
+        login = ""
+        notifications = []
+        reviews = []
+        pullRequests = []
+        repos = []
+        seenNotificationIds = null
+        errorText = ""
+        refresh(false)
     }
 
     function apply(data) {
@@ -109,10 +126,10 @@ PlasmoidItem {
         }
         if (fresh.length === 1) {
             newNotification.title = fresh[0].subject.title
-            newNotification.text = fresh[0].repository.full_name
+            newNotification.text = fresh[0].repository.full_name + " · @" + login
         } else {
             newNotification.title = i18np("%1 new GitHub notification", "%1 new GitHub notifications", fresh.length)
-            newNotification.text = fresh.map(n => n.subject.title).slice(0, 3).join("\n")
+            newNotification.text = fresh.map(n => n.subject.title).slice(0, 3).concat(["@" + login]).join("\n")
         }
         newNotification.sendEvent()
     }

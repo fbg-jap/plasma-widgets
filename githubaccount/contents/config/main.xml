@@ -4,6 +4,10 @@
       xsi:schemaLocation="http://www.kde.org/standards/kcfg/1.0 http://www.kde.org/standards/kcfg/1.0/kcfg.xsd">
   <kcfgfile name=""/>
   <group name="General">
+    <entry name="account" type="String">
+      <label>gh account to show; empty means gh's active account</label>
+      <default></default>
+    </entry>
     <entry name="pollInterval" type="Int">
       <label>Minutes between checks</label>
       <default>3</default>

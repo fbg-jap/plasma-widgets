@@ -10,6 +10,8 @@ PlasmoidItem {
     id: root
 
     readonly property string scriptPath: Qt.resolvedUrl("../code/fetch.sh").toString().replace("file://", "")
+    // Which gh account to show; empty means gh's active account.
+    readonly property string account: Plasmoid.configuration.account.trim()
 
     property string login: ""
     property int prCount: -1
@@ -22,8 +24,22 @@ PlasmoidItem {
 
     readonly property bool loaded: prCount >= 0
 
+    function shellQuote(s) {
+        return "'" + s.replace(/'/g, "'\\''") + "'"
+    }
+
     function refresh() {
-        executable.exec("sh '" + scriptPath + "'")
+        executable.exec("sh " + shellQuote(scriptPath) + " " + shellQuote(account))
+    }
+
+    onAccountChanged: {
+        login = ""
+        prCount = -1
+        reviewCount = -1
+        ciFailing = []
+        ciRunning = []
+        errorText = ""
+        refresh()
     }
 
     function apply(data) {

@@ -66,7 +66,7 @@ To update after pulling changes, use `-u` instead of `-i`. A widget already on t
 ## Requirements
 
 - Plasma 6
-- **GitHub Account / GitHub Counts:** the [GitHub CLI](https://cli.github.com/) (`gh`), logged in with `gh auth login`. The widgets use its stored login and never handle a token themselves.
+- **GitHub Account / GitHub Counts:** the [GitHub CLI](https://cli.github.com/) (`gh`), logged in with `gh auth login`. The widgets use its stored login and never handle a token themselves. Each widget can show any account `gh` is logged in to, picked in its settings, so you can add one widget per account. Run `gh auth login` again to add more accounts.
 - **PRTG Status:** `curl` and `secret-tool` (libsecret), and PRTG 22.2 or newer for API keys.
 
 ## PRTG setup
