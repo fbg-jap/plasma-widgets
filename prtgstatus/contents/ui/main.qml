@@ -1,6 +1,7 @@
 import QtQuick
 import QtQuick.Controls as QQC2
 import QtQuick.Layouts
+import QtQuick.Shapes
 import org.kde.plasma.plasmoid
 import org.kde.plasma.core as PlasmaCore
 import org.kde.plasma.components as PlasmaComponents
@@ -32,23 +33,23 @@ PlasmoidItem {
 
     // PRTG's sensor states in the order its status bar shows them. The colours come from the
     // Appearance settings, which default to PRTG's own so the badges match its web interface.
-    // "glyph" is used by the square style, "roundGlyph" by the rounded style (PRTG's newer look);
+    // "glyph" (a glyphPaths key) is used by the square style, "roundGlyph" by the rounded style (PRTG's newer look);
     // "check" adds the small tick PRTG puts on acknowledged alarms. "inPanel" is the
     // per-state switch from the General settings.
     readonly property var sensorStates: [
-        { key: "down", label: i18n("Down"), glyph: "↓", roundGlyph: "✕", color: Plasmoid.configuration.colorDown,
+        { key: "down", label: i18n("Down"), glyph: "arrowDown", roundGlyph: "cross", color: Plasmoid.configuration.colorDown,
           inPanel: Plasmoid.configuration.showDownInPanel, codes: [5, 14] },
-        { key: "acknowledged", label: i18n("Down (acknowledged)"), glyph: "✓", roundGlyph: "✕", check: true, color: Plasmoid.configuration.colorAcknowledged,
+        { key: "acknowledged", label: i18n("Down (acknowledged)"), glyph: "check", roundGlyph: "cross", check: true, color: Plasmoid.configuration.colorAcknowledged,
           inPanel: Plasmoid.configuration.showAcknowledgedInPanel, codes: [13] },
-        { key: "warning", label: i18n("Warning"), glyph: "!", roundGlyph: "!", color: Plasmoid.configuration.colorWarning,
+        { key: "warning", label: i18n("Warning"), glyph: "exclamation", roundGlyph: "exclamation", color: Plasmoid.configuration.colorWarning,
           inPanel: Plasmoid.configuration.showWarningInPanel, codes: [4] },
-        { key: "unusual", label: i18n("Unusual"), glyph: "~", roundGlyph: "∿", color: Plasmoid.configuration.colorUnusual,
+        { key: "unusual", label: i18n("Unusual"), glyph: "wave", roundGlyph: "wave", color: Plasmoid.configuration.colorUnusual,
           inPanel: Plasmoid.configuration.showUnusualInPanel, codes: [10] },
-        { key: "unknown", label: i18n("Unknown"), glyph: "?", roundGlyph: "--", color: Plasmoid.configuration.colorUnknown,
+        { key: "unknown", label: i18n("Unknown"), glyph: "question", roundGlyph: "dash", color: Plasmoid.configuration.colorUnknown,
           inPanel: Plasmoid.configuration.showUnknownInPanel, codes: [1, 2, 6] },
-        { key: "paused", label: i18n("Paused"), glyph: "❚❚", roundGlyph: "❚❚", color: Plasmoid.configuration.colorPaused,
+        { key: "paused", label: i18n("Paused"), glyph: "pause", roundGlyph: "pause", color: Plasmoid.configuration.colorPaused,
           inPanel: Plasmoid.configuration.showPausedInPanel, codes: [7, 8, 9, 11, 12] },
-        { key: "up", label: i18n("Up"), glyph: "✓", roundGlyph: "✓", color: Plasmoid.configuration.colorUp,
+        { key: "up", label: i18n("Up"), glyph: "check", roundGlyph: "check", color: Plasmoid.configuration.colorUp,
           inPanel: Plasmoid.configuration.showUpInPanel, codes: [3] },
     ]
     readonly property var visibleStates: sensorStates.filter(st => (stateCounts[st.key] || 0) > 0)
@@ -214,6 +215,54 @@ PlasmoidItem {
         }
     ]
 
+    // Badge symbols as vector paths on a 100×100 grid, so they're exactly centred and sharp at any
+    // size (font glyphs like ▶ or ✕ sit off-centre). "stroke" paths are drawn as rounded lines,
+    // "fill" paths are filled.
+    readonly property var glyphPaths: ({
+        check: { stroke: "M 25 52 L 43 70 L 76 32" },
+        cross: { stroke: "M 30 30 L 70 70 M 70 30 L 30 70" },
+        exclamation: { stroke: "M 50 22 L 50 54", fill: "M 42 72 A 8 8 0 1 0 58 72 A 8 8 0 1 0 42 72 Z" },
+        wave: { stroke: "M 20 55 C 30 30, 42 30, 50 50 C 58 70, 70 70, 80 45" },
+        dash: { stroke: "M 24 50 L 40 50 M 60 50 L 76 50" },
+        question: { stroke: "M 37 37 C 37 21, 63 21, 63 37 C 63 49, 50 48, 50 58", fill: "M 43 74 A 7 7 0 1 0 57 74 A 7 7 0 1 0 43 74 Z" },
+        arrowDown: { stroke: "M 50 24 L 50 74 M 31 55 L 50 74 L 69 55" },
+        pause: { fill: "M 30 26 L 44 26 L 44 74 L 30 74 Z M 56 26 L 70 26 L 70 74 L 56 74 Z" },
+        stop: { fill: "M 31 31 L 69 31 L 69 69 L 31 69 Z" },
+        play: { fill: "M 36 25 L 76 50 L 36 75 Z" },
+        restart: { stroke: "M 71 40 A 23 23 0 1 0 73 58", fill: "M 60 26 L 82 28 L 74 48 Z" },
+        gear: { stroke: "M 50 34 A 16 16 0 1 1 49.9 34 M 50 14 L 50 24 M 50 76 L 50 86 M 14 50 L 24 50 M 76 50 L 86 50 M 25 25 L 32 32 M 68 68 L 75 75 M 75 25 L 68 32 M 25 75 L 32 68" },
+    })
+
+    // One badge symbol from glyphPaths, scaled to the item's size.
+    component Glyph: Item {
+        id: glyph
+        property string kind
+        property color color
+        readonly property var paths: root.glyphPaths[kind] || ({})
+
+        Shape {
+            width: 100
+            height: 100
+            scale: glyph.width / 100
+            transformOrigin: Item.TopLeft
+            preferredRendererType: Shape.CurveRenderer
+
+            ShapePath {
+                strokeColor: glyph.paths.stroke ? glyph.color : "transparent"
+                strokeWidth: 12
+                fillColor: "transparent"
+                capStyle: ShapePath.RoundCap
+                joinStyle: ShapePath.RoundJoin
+                PathSvg { path: glyph.paths.stroke || "M 0 0" }
+            }
+            ShapePath {
+                strokeColor: "transparent"
+                fillColor: glyph.paths.fill ? glyph.color : "transparent"
+                PathSvg { path: glyph.paths.fill || "M 0 0" }
+            }
+        }
+    }
+
     // A PRTG-style status badge: the state's symbol on a block of its colour, then the count.
     // Square style matches PRTG's classic status bar; rounded style its newer pill-shaped one.
     component StatusBadge: Rectangle {
@@ -236,12 +285,12 @@ PlasmoidItem {
             radius: parent.rounded ? width / 2 : 2
             color: sensorState.color
 
-            PlasmaComponents.Label {
+            Glyph {
                 anchors.centerIn: parent
-                text: parent.parent.rounded ? sensorState.roundGlyph : sensorState.glyph
+                width: parent.width * 0.7
+                height: width
+                kind: parent.parent.rounded ? sensorState.roundGlyph : sensorState.glyph
                 color: root.contrastText(sensorState.color)
-                font.bold: true
-                font.pixelSize: parent.height * (text.length > 1 && text !== "❚❚" ? 0.45 : 0.6)
             }
 
             // The small green tick PRTG adds to acknowledged alarms (rounded style).
@@ -258,12 +307,12 @@ PlasmoidItem {
                 border.width: 1
                 border.color: Plasmoid.configuration.colorCountBackground
 
-                PlasmaComponents.Label {
+                Glyph {
                     anchors.centerIn: parent
-                    text: "✓"
+                    width: parent.width * 0.8
+                    height: width
+                    kind: "check"
                     color: root.contrastText(Plasmoid.configuration.colorUp)
-                    font.bold: true
-                    font.pixelSize: parent.height * 0.75
                 }
             }
         }

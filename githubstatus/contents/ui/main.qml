@@ -1,5 +1,6 @@
 import QtQuick
 import QtQuick.Layouts
+import QtQuick.Shapes
 import org.kde.plasma.plasmoid
 import org.kde.plasma.core as PlasmaCore
 import org.kde.plasma.components as PlasmaComponents
@@ -27,26 +28,52 @@ PlasmoidItem {
         ? components
         : components.filter(c => c.status !== "operational")
 
+    // Component states in panel order, worst first. Colours come from the Appearance settings and
+    // default to githubstatus.com's own; "glyph" is the square style's symbol, "roundGlyph" the rounded one's.
+    readonly property var componentStates: [
+        { key: "major_outage", label: i18n("Major outage"), glyph: "cross", roundGlyph: "cross", color: Plasmoid.configuration.colorMajorOutage,
+          inPanel: Plasmoid.configuration.showMajorOutageInPanel },
+        { key: "partial_outage", label: i18n("Partial outage"), glyph: "exclamation", roundGlyph: "exclamation", color: Plasmoid.configuration.colorPartialOutage,
+          inPanel: Plasmoid.configuration.showPartialOutageInPanel },
+        { key: "degraded_performance", label: i18n("Degraded performance"), glyph: "wave", roundGlyph: "wave", color: Plasmoid.configuration.colorDegraded,
+          inPanel: Plasmoid.configuration.showDegradedInPanel },
+        { key: "under_maintenance", label: i18n("Under maintenance"), glyph: "gear", roundGlyph: "gear", color: Plasmoid.configuration.colorMaintenance,
+          inPanel: Plasmoid.configuration.showMaintenanceInPanel },
+        { key: "operational", label: i18n("Operational"), glyph: "check", roundGlyph: "check", color: Plasmoid.configuration.colorOperational,
+          inPanel: Plasmoid.configuration.showOperationalInPanel },
+    ]
+    readonly property var stateCounts: {
+        const counts = {}
+        components.forEach(c => counts[c.status] = (counts[c.status] || 0) + 1)
+        return counts
+    }
+    readonly property var visibleStates: componentStates.filter(st => (stateCounts[st.key] || 0) > 0)
+    // Badges (in the panel, the popup and on the desktop) show the states switched on in the
+    // settings, optionally including empty ones.
+    readonly property var panelStates: componentStates.filter(st => st.inPanel
+        && (Plasmoid.configuration.showZeroInPanel || (stateCounts[st.key] || 0) > 0))
+    readonly property bool badgeMode: Plasmoid.configuration.badgeStyle !== "dot"
+
+    // White or near-black, whichever reads better on the given background colour.
+    function contrastText(background) {
+        const c = Qt.color(background)
+        return 0.299 * c.r + 0.587 * c.g + 0.114 * c.b > 0.6 ? "#202020" : "white"
+    }
+
     function indicatorColor(ind) {
         switch (ind) {
-        case "none": return Kirigami.Theme.positiveTextColor
-        case "minor": return Kirigami.Theme.neutralTextColor
-        case "major":
-        case "critical": return Kirigami.Theme.negativeTextColor
-        case "maintenance": return Kirigami.Theme.activeTextColor
+        case "none": return Plasmoid.configuration.colorOperational
+        case "minor": return Plasmoid.configuration.colorDegraded
+        case "major": return Plasmoid.configuration.colorPartialOutage
+        case "critical": return Plasmoid.configuration.colorMajorOutage
+        case "maintenance": return Plasmoid.configuration.colorMaintenance
         default: return Kirigami.Theme.disabledTextColor
         }
     }
 
     function componentColor(status) {
-        switch (status) {
-        case "operational": return indicatorColor("none")
-        case "degraded_performance": return indicatorColor("minor")
-        case "partial_outage":
-        case "major_outage": return indicatorColor("major")
-        case "under_maintenance": return indicatorColor("maintenance")
-        default: return indicatorColor("unknown")
-        }
+        const st = componentStates.find(st => st.key === status)
+        return st ? st.color : Kirigami.Theme.disabledTextColor
     }
 
     function componentLabel(status) {
@@ -143,8 +170,138 @@ PlasmoidItem {
         onTriggered: root.refresh()
     }
 
+    // Badge symbols as vector paths on a 100×100 grid, so they're exactly centred and sharp at any
+    // size (font glyphs like ▶ or ✕ sit off-centre). "stroke" paths are drawn as rounded lines,
+    // "fill" paths are filled.
+    readonly property var glyphPaths: ({
+        check: { stroke: "M 25 52 L 43 70 L 76 32" },
+        cross: { stroke: "M 30 30 L 70 70 M 70 30 L 30 70" },
+        exclamation: { stroke: "M 50 22 L 50 54", fill: "M 42 72 A 8 8 0 1 0 58 72 A 8 8 0 1 0 42 72 Z" },
+        wave: { stroke: "M 20 55 C 30 30, 42 30, 50 50 C 58 70, 70 70, 80 45" },
+        dash: { stroke: "M 24 50 L 40 50 M 60 50 L 76 50" },
+        question: { stroke: "M 37 37 C 37 21, 63 21, 63 37 C 63 49, 50 48, 50 58", fill: "M 43 74 A 7 7 0 1 0 57 74 A 7 7 0 1 0 43 74 Z" },
+        arrowDown: { stroke: "M 50 24 L 50 74 M 31 55 L 50 74 L 69 55" },
+        pause: { fill: "M 30 26 L 44 26 L 44 74 L 30 74 Z M 56 26 L 70 26 L 70 74 L 56 74 Z" },
+        stop: { fill: "M 31 31 L 69 31 L 69 69 L 31 69 Z" },
+        play: { fill: "M 36 25 L 76 50 L 36 75 Z" },
+        restart: { stroke: "M 71 40 A 23 23 0 1 0 73 58", fill: "M 60 26 L 82 28 L 74 48 Z" },
+        gear: { stroke: "M 50 34 A 16 16 0 1 1 49.9 34 M 50 14 L 50 24 M 50 76 L 50 86 M 14 50 L 24 50 M 76 50 L 86 50 M 25 25 L 32 32 M 68 68 L 75 75 M 75 25 L 68 32 M 25 75 L 32 68" },
+    })
+
+    // One badge symbol from glyphPaths, scaled to the item's size.
+    component Glyph: Item {
+        id: glyph
+        property string kind
+        property color color
+        readonly property var paths: root.glyphPaths[kind] || ({})
+
+        Shape {
+            width: 100
+            height: 100
+            scale: glyph.width / 100
+            transformOrigin: Item.TopLeft
+            preferredRendererType: Shape.CurveRenderer
+
+            ShapePath {
+                strokeColor: glyph.paths.stroke ? glyph.color : "transparent"
+                strokeWidth: 12
+                fillColor: "transparent"
+                capStyle: ShapePath.RoundCap
+                joinStyle: ShapePath.RoundJoin
+                PathSvg { path: glyph.paths.stroke || "M 0 0" }
+            }
+            ShapePath {
+                strokeColor: "transparent"
+                fillColor: glyph.paths.fill ? glyph.color : "transparent"
+                PathSvg { path: glyph.paths.fill || "M 0 0" }
+            }
+        }
+    }
+
+    // A status badge: the state's symbol on a block of its colour, then the count.
+    // Square or rounded (pill-shaped), as chosen under Appearance.
+    component StatusBadge: Rectangle {
+        property var componentState
+        property int count
+        property real size
+        readonly property bool rounded: Plasmoid.configuration.badgeStyle === "rounded"
+
+        implicitHeight: size
+        implicitWidth: glyphBlock.width + countLabel.implicitWidth + size * (rounded ? 0.7 : 0.5)
+        radius: rounded ? height / 2 : 2
+        color: Plasmoid.configuration.colorCountBackground
+        border.width: rounded ? 1.5 : 1
+        border.color: componentState.color
+
+        Rectangle {
+            id: glyphBlock
+            width: parent.size
+            height: parent.size
+            radius: parent.rounded ? width / 2 : 2
+            color: componentState.color
+
+            Glyph {
+                anchors.centerIn: parent
+                width: parent.width * 0.7
+                height: width
+                kind: parent.parent.rounded ? componentState.roundGlyph : componentState.glyph
+                color: root.contrastText(componentState.color)
+            }
+        }
+
+        PlasmaComponents.Label {
+            id: countLabel
+            anchors.left: glyphBlock.right
+            anchors.right: parent.right
+            anchors.verticalCenter: parent.verticalCenter
+            horizontalAlignment: Text.AlignHCenter
+            text: count
+            color: root.contrastText(Plasmoid.configuration.colorCountBackground)
+            font.pixelSize: parent.size * 0.6
+        }
+    }
+
+    // A row (or column, in a vertical panel) of status badges, optionally followed by "(of N)".
+    component BadgeBar: GridLayout {
+        id: bar
+        property real badgeSize
+        property bool vertical: false
+        property var badgeStates: root.visibleStates
+        property bool showTotal: false
+        readonly property int itemCount: badgeStates.length + (showTotal ? 1 : 0)
+
+        flow: vertical ? GridLayout.TopToBottom : GridLayout.LeftToRight
+        rows: vertical ? Math.max(itemCount, 1) : 1
+        columns: vertical ? 1 : Math.max(itemCount, 1)
+        rowSpacing: Kirigami.Units.smallSpacing
+        columnSpacing: Kirigami.Units.smallSpacing
+
+        Repeater {
+            model: bar.badgeStates
+            StatusBadge {
+                required property var modelData
+                componentState: modelData
+                count: root.stateCounts[modelData.key] || 0
+                size: bar.badgeSize
+            }
+        }
+
+        PlasmaComponents.Label {
+            visible: bar.showTotal
+            text: i18n("(of %1)", root.components.length)
+            font.pixelSize: bar.badgeSize * 0.6
+        }
+    }
+
     compactRepresentation: MouseArea {
         id: compact
+
+        readonly property bool vertical: Plasmoid.formFactor === PlasmaCore.Types.Vertical
+        readonly property real badgeSize: Math.min(Kirigami.Units.iconSizes.smallMedium, vertical ? width : height)
+        readonly property bool showTotal: Plasmoid.configuration.showTotalInPanel
+        readonly property bool showBadges: root.badgeMode && root.components.length > 0
+            && (root.panelStates.length > 0 || showTotal)
+
         hoverEnabled: true
         acceptedButtons: Qt.LeftButton | Qt.MiddleButton
         onClicked: mouse => {
@@ -155,21 +312,43 @@ PlasmoidItem {
             }
         }
 
-        Kirigami.Icon {
-            anchors.fill: parent
-            source: Plasmoid.icon
-            active: compact.containsMouse
+        Layout.minimumWidth: vertical ? 0 : (showBadges ? badges.implicitWidth : badgeSize)
+        Layout.minimumHeight: vertical ? (showBadges ? badges.implicitHeight : badgeSize) : 0
+
+        BadgeBar {
+            id: badges
+            anchors.centerIn: parent
+            visible: compact.showBadges
+            badgeStates: root.panelStates
+            showTotal: compact.showTotal
+            vertical: compact.vertical
+            badgeSize: compact.badgeSize
+            opacity: root.errorText ? 0.5 : 1
         }
 
-        Rectangle {
-            width: Math.max(Kirigami.Units.smallSpacing * 2, parent.width * 0.35)
+        // "Icon with status dot" style, and the fallback before the first check.
+        Item {
+            anchors.centerIn: parent
+            width: Math.min(parent.width, parent.height)
             height: width
-            radius: width / 2
-            anchors.right: parent.right
-            anchors.bottom: parent.bottom
-            color: root.errorText ? root.indicatorColor("unknown") : root.indicatorColor(root.indicator)
-            border.width: 1
-            border.color: Kirigami.Theme.backgroundColor
+            visible: !compact.showBadges
+
+            Kirigami.Icon {
+                anchors.fill: parent
+                source: Plasmoid.icon
+                active: compact.containsMouse
+            }
+
+            Rectangle {
+                width: Math.max(Kirigami.Units.smallSpacing * 2, parent.width * 0.35)
+                height: width
+                radius: width / 2
+                anchors.right: parent.right
+                anchors.bottom: parent.bottom
+                color: root.errorText ? root.indicatorColor("unknown") : root.indicatorColor(root.indicator)
+                border.width: 1
+                border.color: Kirigami.Theme.backgroundColor
+            }
         }
     }
 
@@ -221,13 +400,28 @@ PlasmoidItem {
             }
         }
 
-        footer: PlasmaComponents.Label {
-            padding: Kirigami.Units.smallSpacing
-            opacity: 0.7
-            font: Kirigami.Theme.smallFont
-            text: root.errorText
-                ? root.errorText
-                : (isNaN(root.lastChecked) ? "" : i18n("Last checked %1", root.lastChecked.toLocaleTimeString(Qt.locale(), Locale.ShortFormat)))
+        footer: ColumnLayout {
+            spacing: 0
+
+            BadgeBar {
+                Layout.margins: Kirigami.Units.smallSpacing
+                Layout.bottomMargin: 0
+                visible: root.badgeMode && root.components.length > 0
+                badgeSize: Kirigami.Units.iconSizes.small * 1.25
+                badgeStates: root.panelStates
+                showTotal: Plasmoid.configuration.showTotalInPanel
+            }
+
+            PlasmaComponents.Label {
+                Layout.fillWidth: true
+                Layout.margins: Kirigami.Units.smallSpacing
+                opacity: 0.7
+                font: Kirigami.Theme.smallFont
+                elide: Text.ElideRight
+                text: root.errorText
+                    ? root.errorText
+                    : (isNaN(root.lastChecked) ? "" : i18n("Last checked %1", root.lastChecked.toLocaleTimeString(Qt.locale(), Locale.ShortFormat)))
+            }
         }
 
         PlasmaComponents.ScrollView {

@@ -4,7 +4,7 @@ KDE Plasma 6 widgets for keeping an eye on GitHub, PRTG and Docker from the pane
 
 | Widget | Id | Shows |
 |---|---|---|
-| [GitHub Status](githubstatus) | `dk.madebypless.githubstatus` | GitHub's service health from githubstatus.com, with active incidents |
+| [GitHub Status](githubstatus) | `dk.madebypless.githubstatus` | GitHub's service health from githubstatus.com as status badges per component state, with active incidents |
 | [GitHub Account](githubaccount) | `dk.madebypless.githubaccount` | Count badges for review requests, notifications, open PRs and CI; click for the full lists. One widget per account. |
 | [PRTG Status](prtgstatus) | `dk.madebypless.prtgstatus` | PRTG-style status badges (down, warning, unusual, paused, up…), with the problem sensors in a popup |
 | [Docker Status](dockerstatus) | `dk.madebypless.dockerstatus` | Status badges for your containers (failed, unhealthy, restarting, paused, stopped, running), with start / stop / restart per container |
@@ -15,11 +15,11 @@ The screenshots show sample data, apart from GitHub Status, which shows the live
 
 ### GitHub Status
 
-In the panel, a coloured dot shows the overall status. Click it for the per-component view:
+The panel shows a badge per component state (major outage, partial outage, degraded, maintenance, operational), like the other widgets. Under **Appearance** you can pick square or rounded badges, or the classic icon with a coloured status dot, and change the colours. Click for the per-component view:
 
-<img src="screenshots/githubstatus-panel.png" width="66" alt="GitHub Status in the panel: branch icon with a green dot">
+<img src="screenshots/githubstatus-panel.png" width="84" alt="GitHub Status in the panel: a green badge showing 11 operational components">
 
-<img src="screenshots/githubstatus-popup.png" width="360" alt="GitHub Status popup: All Systems Operational, with every component listed as operational">
+<img src="screenshots/githubstatus-popup.png" width="396" alt="GitHub Status popup: All Systems Operational, with every component listed as operational and the badge row along the bottom">
 
 ### GitHub Account
 

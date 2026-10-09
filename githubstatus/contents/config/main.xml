@@ -18,5 +18,63 @@
       <label>List components that are fully operational</label>
       <default>true</default>
     </entry>
+    <entry name="showMajorOutageInPanel" type="Bool">
+      <label>Show the major outage badge</label>
+      <default>true</default>
+    </entry>
+    <entry name="showPartialOutageInPanel" type="Bool">
+      <label>Show the partial outage badge</label>
+      <default>true</default>
+    </entry>
+    <entry name="showDegradedInPanel" type="Bool">
+      <label>Show the degraded performance badge</label>
+      <default>true</default>
+    </entry>
+    <entry name="showMaintenanceInPanel" type="Bool">
+      <label>Show the under maintenance badge</label>
+      <default>true</default>
+    </entry>
+    <entry name="showOperationalInPanel" type="Bool">
+      <label>Show the operational badge</label>
+      <default>true</default>
+    </entry>
+    <entry name="showZeroInPanel" type="Bool">
+      <label>Show badges for states with no components</label>
+      <default>false</default>
+    </entry>
+    <entry name="showTotalInPanel" type="Bool">
+      <label>Show the total number of components after the badges</label>
+      <default>false</default>
+    </entry>
+  </group>
+  <group name="Appearance">
+    <entry name="badgeStyle" type="String">
+      <label>Panel style: square badges, rounded badges, or an icon with a status dot</label>
+      <default>square</default>
+    </entry>
+    <entry name="colorMajorOutage" type="Color">
+      <label>major outage colour</label>
+      <default>#cb2431</default>
+    </entry>
+    <entry name="colorPartialOutage" type="Color">
+      <label>partial outage colour</label>
+      <default>#e36209</default>
+    </entry>
+    <entry name="colorDegraded" type="Color">
+      <label>degraded performance colour</label>
+      <default>#dbab09</default>
+    </entry>
+    <entry name="colorMaintenance" type="Color">
+      <label>under maintenance colour</label>
+      <default>#0366d6</default>
+    </entry>
+    <entry name="colorOperational" type="Color">
+      <label>operational colour</label>
+      <default>#28a745</default>
+    </entry>
+    <entry name="colorCountBackground" type="Color">
+      <label>Count background badge colour</label>
+      <default>#2b2f33</default>
+    </entry>
   </group>
 </kcfg>

@@ -1,5 +1,6 @@
 import QtQuick
 import QtQuick.Layouts
+import QtQuick.Shapes
 import org.kde.plasma.plasmoid
 import org.kde.plasma.core as PlasmaCore
 import org.kde.plasma.components as PlasmaComponents
@@ -34,17 +35,17 @@ PlasmoidItem {
     // Container states in panel order, worst first. Colours come from the Appearance settings.
     // "glyph" is used by the square style, "roundGlyph" by the rounded one.
     readonly property var containerStates: [
-        { key: "failed", label: i18n("Failed"), glyph: "✕", roundGlyph: "✕", color: Plasmoid.configuration.colorFailed,
+        { key: "failed", label: i18n("Failed"), glyph: "cross", roundGlyph: "cross", color: Plasmoid.configuration.colorFailed,
           inPanel: Plasmoid.configuration.showFailedInPanel },
-        { key: "unhealthy", label: i18n("Unhealthy"), glyph: "!", roundGlyph: "!", color: Plasmoid.configuration.colorUnhealthy,
+        { key: "unhealthy", label: i18n("Unhealthy"), glyph: "exclamation", roundGlyph: "exclamation", color: Plasmoid.configuration.colorUnhealthy,
           inPanel: Plasmoid.configuration.showUnhealthyInPanel },
-        { key: "restarting", label: i18n("Restarting"), glyph: "↻", roundGlyph: "↻", color: Plasmoid.configuration.colorRestarting,
+        { key: "restarting", label: i18n("Restarting"), glyph: "restart", roundGlyph: "restart", color: Plasmoid.configuration.colorRestarting,
           inPanel: Plasmoid.configuration.showRestartingInPanel },
-        { key: "paused", label: i18n("Paused"), glyph: "❚❚", roundGlyph: "❚❚", color: Plasmoid.configuration.colorPaused,
+        { key: "paused", label: i18n("Paused"), glyph: "pause", roundGlyph: "pause", color: Plasmoid.configuration.colorPaused,
           inPanel: Plasmoid.configuration.showPausedInPanel },
-        { key: "stopped", label: i18n("Stopped"), glyph: "■", roundGlyph: "■", color: Plasmoid.configuration.colorStopped,
+        { key: "stopped", label: i18n("Stopped"), glyph: "stop", roundGlyph: "stop", color: Plasmoid.configuration.colorStopped,
           inPanel: Plasmoid.configuration.showStoppedInPanel },
-        { key: "running", label: i18n("Running"), glyph: "▶", roundGlyph: "▶", color: Plasmoid.configuration.colorRunning,
+        { key: "running", label: i18n("Running"), glyph: "play", roundGlyph: "play", color: Plasmoid.configuration.colorRunning,
           inPanel: Plasmoid.configuration.showRunningInPanel },
     ]
     readonly property var visibleStates: containerStates.filter(st => (stateCounts[st.key] || 0) > 0)
@@ -260,6 +261,54 @@ PlasmoidItem {
         }
     ]
 
+    // Badge symbols as vector paths on a 100×100 grid, so they're exactly centred and sharp at any
+    // size (font glyphs like ▶ or ✕ sit off-centre). "stroke" paths are drawn as rounded lines,
+    // "fill" paths are filled.
+    readonly property var glyphPaths: ({
+        check: { stroke: "M 25 52 L 43 70 L 76 32" },
+        cross: { stroke: "M 30 30 L 70 70 M 70 30 L 30 70" },
+        exclamation: { stroke: "M 50 22 L 50 54", fill: "M 42 72 A 8 8 0 1 0 58 72 A 8 8 0 1 0 42 72 Z" },
+        wave: { stroke: "M 20 55 C 30 30, 42 30, 50 50 C 58 70, 70 70, 80 45" },
+        dash: { stroke: "M 24 50 L 40 50 M 60 50 L 76 50" },
+        question: { stroke: "M 37 37 C 37 21, 63 21, 63 37 C 63 49, 50 48, 50 58", fill: "M 43 74 A 7 7 0 1 0 57 74 A 7 7 0 1 0 43 74 Z" },
+        arrowDown: { stroke: "M 50 24 L 50 74 M 31 55 L 50 74 L 69 55" },
+        pause: { fill: "M 30 26 L 44 26 L 44 74 L 30 74 Z M 56 26 L 70 26 L 70 74 L 56 74 Z" },
+        stop: { fill: "M 31 31 L 69 31 L 69 69 L 31 69 Z" },
+        play: { fill: "M 36 25 L 76 50 L 36 75 Z" },
+        restart: { stroke: "M 71 40 A 23 23 0 1 0 73 58", fill: "M 60 26 L 82 28 L 74 48 Z" },
+        gear: { stroke: "M 50 34 A 16 16 0 1 1 49.9 34 M 50 14 L 50 24 M 50 76 L 50 86 M 14 50 L 24 50 M 76 50 L 86 50 M 25 25 L 32 32 M 68 68 L 75 75 M 75 25 L 68 32 M 25 75 L 32 68" },
+    })
+
+    // One badge symbol from glyphPaths, scaled to the item's size.
+    component Glyph: Item {
+        id: glyph
+        property string kind
+        property color color
+        readonly property var paths: root.glyphPaths[kind] || ({})
+
+        Shape {
+            width: 100
+            height: 100
+            scale: glyph.width / 100
+            transformOrigin: Item.TopLeft
+            preferredRendererType: Shape.CurveRenderer
+
+            ShapePath {
+                strokeColor: glyph.paths.stroke ? glyph.color : "transparent"
+                strokeWidth: 12
+                fillColor: "transparent"
+                capStyle: ShapePath.RoundCap
+                joinStyle: ShapePath.RoundJoin
+                PathSvg { path: glyph.paths.stroke || "M 0 0" }
+            }
+            ShapePath {
+                strokeColor: "transparent"
+                fillColor: glyph.paths.fill ? glyph.color : "transparent"
+                PathSvg { path: glyph.paths.fill || "M 0 0" }
+            }
+        }
+    }
+
     // A status badge: the state's symbol on a block of its colour, then the count.
     // Square or rounded (pill-shaped), as chosen under Appearance.
     component StatusBadge: Rectangle {
@@ -282,12 +331,12 @@ PlasmoidItem {
             radius: parent.rounded ? width / 2 : 2
             color: containerState.color
 
-            PlasmaComponents.Label {
+            Glyph {
                 anchors.centerIn: parent
-                text: parent.parent.rounded ? containerState.roundGlyph : containerState.glyph
+                width: parent.width * 0.7
+                height: width
+                kind: parent.parent.rounded ? containerState.roundGlyph : containerState.glyph
                 color: root.contrastText(containerState.color)
-                font.bold: true
-                font.pixelSize: parent.height * 0.55
             }
         }
 
