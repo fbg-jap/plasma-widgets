@@ -326,7 +326,7 @@ PlasmoidItem {
             width: compact.badgeSize
             height: compact.badgeSize
             visible: !compact.showBadges
-            source: Plasmoid.icon
+            source: Plasmoid.configuration.showLogo && Plasmoid.configuration.logoIcon || Plasmoid.icon
             active: compact.containsMouse
             opacity: root.errorText || root.login === "" ? 0.5 : 1
         }

@@ -339,7 +339,7 @@ PlasmoidItem {
 
             Kirigami.Icon {
                 anchors.fill: parent
-                source: Plasmoid.icon
+                source: Plasmoid.configuration.showLogo && Plasmoid.configuration.logoIcon || Plasmoid.icon
                 active: compact.containsMouse
             }
 
