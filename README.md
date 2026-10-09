@@ -45,6 +45,14 @@ A pill appears in the panel for each problem category (down, warning, unusual):
 
 ## Install
 
+Download the widget's `.plasmoid` file from the [latest release](https://github.com/fbg-jap/plasma-widgets/releases/latest). Then right-click the panel or desktop → **Add Widgets** → **Get New** → **Install Widget From Local File…**, or run:
+
+```sh
+kpackagetool6 -t Plasma/Applet -i githubstatus.plasmoid
+```
+
+Or install from a clone:
+
 ```sh
 git clone https://github.com/fbg-jap/plasma-widgets.git
 cd plasma-widgets
