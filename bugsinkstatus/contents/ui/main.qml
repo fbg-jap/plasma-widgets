@@ -566,6 +566,9 @@ PlasmoidItem {
             anchors.fill: parent
             // Long titles are elided instead of making the list scroll sideways.
             contentWidth: availableWidth
+            // Never scroll sideways. An as-needed horizontal bar would also toggle with the vertical one,
+            // which changes availableWidth: a binding loop on its "visible".
+            PlasmaComponents.ScrollBar.horizontal.policy: PlasmaComponents.ScrollBar.AlwaysOff
             visible: root.loaded && root.openCount > 0
 
             ColumnLayout {
