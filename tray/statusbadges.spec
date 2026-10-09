@@ -17,6 +17,30 @@ excludes = [f"PySide6.{m}" for m in (
     "QtStateMachine", "QtHttpServer", "QtVirtualKeyboard")]
 
 a = Analysis(["run.py"], datas=datas, hiddenimports=hiddenimports, excludes=excludes)
+
+# `excludes` only drops Python modules: PyInstaller still copies every QML module PySide6 ships, and their
+# native libraries with them (Chromium alone is ~200 MB). The app uses QtQuick, Controls (Fusion style),
+# Layouts and Shapes, so drop the Qt files of everything else, plus the Qt translations (the app is English).
+unused = (
+    "WebEngine", "WebChannel", "WebSockets", "WebView", "Quick3D", "Qt3D", "Qt63D", "Graphs", "Charts",
+    "DataVisualization", "Pdf", "ShaderTools", "Location", "Positioning", "Multimedia", "SpatialAudio",
+    "TextToSpeech", "Sensors", "Bluetooth", "Nfc", "SerialPort", "SerialBus", "VirtualKeyboard", "Scxml",
+    "StateMachine", "RemoteObjects", "HttpServer", "Qt5Compat", "StyleKit", "QuickDialogs", "sqldrivers",
+    # Plugins for the modules above, which would otherwise look for their missing libraries at runtime.
+    "qpdf", "virtualkeyboard", "quick3d", "QtQuick/Dialogs/", "QtQuick/Scene2D/", "QtQuick/Scene3D/",
+    # Controls styles other than Fusion (and Basic, its fallback).
+    "Material", "Universal", "Imagine", "FluentWinUI3", "QuickControls2MacOS", "QuickControls2IOS",
+    "QuickControls2Windows", "Controls/macOS/", "Controls/iOS/", "Controls/Windows/",
+    "Qt/translations/", "PySide6/translations/",
+)
+
+def used(entry):
+    path = entry[0].replace("\\", "/")
+    return not any(name in path for name in unused)
+
+a.binaries = [e for e in a.binaries if used(e)]
+a.datas = [e for e in a.datas if used(e)]
+
 pyz = PYZ(a.pure)
 exe = EXE(pyz, a.scripts, [], exclude_binaries=True, name="StatusBadges", console=False, icon=icon)
 coll = COLLECT(exe, a.binaries, a.datas, name="StatusBadges")
