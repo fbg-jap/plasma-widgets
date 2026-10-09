@@ -1,0 +1,25 @@
+name: Mac runner smoke test
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [mac-runner-smoke]
+    paths: [.github/workflows/mac-smoke.yml]
+
+jobs:
+  smoke:
+    runs-on: [self-hosted, macOS, ARM64]
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+      - name: Toolchain
+        run: |
+          sw_vers
+          uname -m
+          node -v
+          gh --version | head -1
+          jq --version
+      - name: Docker via Colima
+        run: |
+          docker info --format '{{.ServerVersion}} {{.OperatingSystem}}'
+          docker run --rm hello-world
