@@ -14,6 +14,10 @@
       <min>1</min>
       <max>60</max>
     </entry>
+    <entry name="showPausedInPanel" type="Bool">
+      <label>Show the paused-sensors badge in the panel</label>
+      <default>true</default>
+    </entry>
     <entry name="notifyOnDown" type="Bool">
       <label>Send a desktop notification when a sensor goes down</label>
       <default>true</default>

@@ -42,6 +42,10 @@ PlasmoidItem {
         { key: "unknown", label: i18n("Unknown"), glyph: "?", color: "#8a8a8a", glyphColor: "white", codes: [1, 2, 6] },
     ]
     readonly property var visibleStates: sensorStates.filter(st => (stateCounts[st.key] || 0) > 0)
+    // The panel can leave out paused sensors; the popup always shows every state.
+    readonly property var panelStates: Plasmoid.configuration.showPausedInPanel
+        ? visibleStates
+        : visibleStates.filter(st => st.key !== "paused")
 
     function stateColor(key) {
         return sensorStates.find(st => st.key === key).color
@@ -238,15 +242,16 @@ PlasmoidItem {
     component BadgeBar: GridLayout {
         property real badgeSize
         property bool vertical: false
+        property var badgeStates: root.visibleStates
 
         flow: vertical ? GridLayout.TopToBottom : GridLayout.LeftToRight
-        rows: vertical ? root.visibleStates.length : 1
-        columns: vertical ? 1 : root.visibleStates.length
+        rows: vertical ? badgeStates.length : 1
+        columns: vertical ? 1 : badgeStates.length
         rowSpacing: Kirigami.Units.smallSpacing
         columnSpacing: Kirigami.Units.smallSpacing
 
         Repeater {
-            model: root.visibleStates
+            model: badgeStates
             StatusBadge {
                 required property var modelData
                 sensorState: modelData
@@ -261,7 +266,7 @@ PlasmoidItem {
 
         readonly property bool vertical: Plasmoid.formFactor === PlasmaCore.Types.Vertical
         readonly property real badgeSize: Math.min(Kirigami.Units.iconSizes.smallMedium, vertical ? width : height)
-        readonly property bool showBadges: root.loaded && root.visibleStates.length > 0
+        readonly property bool showBadges: root.loaded && root.panelStates.length > 0
 
         hoverEnabled: true
         acceptedButtons: Qt.LeftButton | Qt.MiddleButton
@@ -280,6 +285,7 @@ PlasmoidItem {
             id: badges
             anchors.centerIn: parent
             visible: compact.showBadges
+            badgeStates: root.panelStates
             vertical: compact.vertical
             badgeSize: compact.badgeSize
             opacity: root.errorText ? 0.5 : 1

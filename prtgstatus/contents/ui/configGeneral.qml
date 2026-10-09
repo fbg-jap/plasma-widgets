@@ -11,6 +11,7 @@ KCM.SimpleKCM {
     property alias cfg_serverUrl: serverUrl.text
     property alias cfg_pollInterval: pollInterval.value
     property alias cfg_notifyOnDown: notifyOnDown.checked
+    property alias cfg_showPausedInPanel: showPausedInPanel.checked
 
     readonly property string normalizedUrl: serverUrl.text.trim().replace(/\/+$/, "")
 
@@ -161,6 +162,12 @@ KCM.SimpleKCM {
             to: 60
             textFromValue: (value, locale) => i18np("%1 minute", "%1 minutes", value)
             valueFromText: (text, locale) => parseInt(text)
+        }
+
+        QQC2.Switch {
+            id: showPausedInPanel
+            Kirigami.FormData.label: i18n("Panel:")
+            text: i18n("Show paused sensors")
         }
 
         QQC2.CheckBox {
