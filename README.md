@@ -1,6 +1,6 @@
 # Plasma Widgets
 
-KDE Plasma 6 widgets for keeping an eye on GitHub, PRTG, Docker and Bugsink from the panel or desktop.
+KDE Plasma 6 widgets for keeping an eye on GitHub, PRTG, Docker, Bugsink and Dokploy from the panel or desktop.
 
 | Widget | Id | Shows |
 |---|---|---|
@@ -9,6 +9,7 @@ KDE Plasma 6 widgets for keeping an eye on GitHub, PRTG, Docker and Bugsink from
 | [PRTG Status](prtgstatus) | `dk.madebypless.prtgstatus` | PRTG-style status badges (down, warning, unusual, paused, up…), with the problem sensors in a popup |
 | [Docker Status](dockerstatus) | `dk.madebypless.dockerstatus` | Status badges for your containers (failed, unhealthy, restarting, paused, stopped, running), with start / stop / restart per container |
 | [Bugsink Status](bugsinkstatus) | `dk.madebypless.bugsinkstatus` | Status badges for your Bugsink issues (new, open, muted, resolved), with the open issues per project and resolve / mute buttons |
+| [Dokploy Status](dokploystatus) | `dk.madebypless.dokploystatus` | Status badges for your Dokploy applications, Compose stacks and databases (failed, deploying, deployed, idle), with deploy / start / stop buttons |
 
 ## Screenshots
 
@@ -58,6 +59,16 @@ Error tracking from a [Bugsink](https://www.bugsink.com/) server: badges for new
 
 Muted and resolved badges are off by default; switch them on under **Show badges**. Bugsink's API can't filter issues by status, so the widget reads each project's most recently seen issues (10 pages by default, adjustable) to count them.
 
+### Dokploy Status
+
+Deployments from a [Dokploy](https://dokploy.com/) server: badges for failed, deploying, deployed and idle services, counting applications, Compose stacks and databases. Click for every service grouped by project and environment. Click a service to open it in Dokploy, or deploy, start or stop it from the popup:
+
+<img src="screenshots/dokploystatus-panel.png" width="212" alt="Dokploy Status in the panel: badges for 1 failed, 1 deploying, 7 deployed and 1 idle service">
+
+<img src="screenshots/dokploystatus-popup.png" width="468" alt="Dokploy Status popup: services grouped by project and environment with type and status, deploy and stop buttons, and a spinner on the one that is deploying">
+
+While something is deploying, the widget checks every few seconds so you see the result straight away, and it notifies you when a deployment fails.
+
 ## Install
 
 Download the widget's `.plasmoid` file from the [latest release](https://github.com/pless84/plasma-widgets/releases/latest). Then right-click the panel or desktop → **Add Widgets** → **Get New** → **Install Widget From Local File…**, or run:
@@ -84,6 +95,7 @@ To update after pulling changes, use `-u` instead of `-i`. A widget already on t
 - **GitHub Account:** the [GitHub CLI](https://cli.github.com/) (`gh`), logged in with `gh auth login`. The widget uses its stored login and never handles a token itself. It can show any account `gh` is logged in to, picked in its settings, so you can add one widget per account. Run `gh auth login` again to add more accounts.
 - **PRTG Status:** `curl` and `secret-tool` (libsecret), and PRTG 22.2 or newer for API keys.
 - **Bugsink Status:** `python3` and `secret-tool` (libsecret), and a Bugsink API token. Create one in Bugsink under Tokens (`/bsmain/auth_tokens/`), paste it into the widget's settings and click **Save to Keyring**.
+- **Dokploy Status:** `python3` and `secret-tool` (libsecret), and a Dokploy API key. Generate one in Dokploy under Settings → Profile → API/CLI, paste it into the widget's settings and click **Save to Keyring**.
 - **Docker Status:** the `docker` CLI with access to the daemon (e.g. your user in the `docker` group). Any `docker context` works, including Podman.
 
 ## PRTG setup

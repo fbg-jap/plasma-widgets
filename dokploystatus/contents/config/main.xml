@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<kcfg xmlns="http://www.kde.org/standards/kcfg/1.0"
+      xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+      xsi:schemaLocation="http://www.kde.org/standards/kcfg/1.0 http://www.kde.org/standards/kcfg/1.0/kcfg.xsd">
+  <kcfgfile name=""/>
+  <group name="General">
+    <entry name="serverUrl" type="String">
+      <label>Dokploy server address, e.g. https://dokploy.example.com</label>
+      <default></default>
+    </entry>
+    <entry name="pollInterval" type="Int">
+      <label>Minutes between checks</label>
+      <default>1</default>
+      <min>1</min>
+      <max>60</max>
+    </entry>
+    <entry name="showFailedInPanel" type="Bool">
+      <label>Show the failed (last deployment failed) badge</label>
+      <default>true</default>
+    </entry>
+    <entry name="showDeployingInPanel" type="Bool">
+      <label>Show the deploying badge</label>
+      <default>true</default>
+    </entry>
+    <entry name="showDeployedInPanel" type="Bool">
+      <label>Show the deployed badge</label>
+      <default>true</default>
+    </entry>
+    <entry name="showIdleInPanel" type="Bool">
+      <label>Show the idle (not deployed or stopped) badge</label>
+      <default>true</default>
+    </entry>
+    <entry name="showZeroInPanel" type="Bool">
+      <label>Show badges for states with no services</label>
+      <default>false</default>
+    </entry>
+    <entry name="showTotalInPanel" type="Bool">
+      <label>Show the total number of services after the badges</label>
+      <default>false</default>
+    </entry>
+    <entry name="notifyOnFailure" type="Bool">
+      <label>Send a desktop notification when a deployment fails</label>
+      <default>true</default>
+    </entry>
+  </group>
+  <group name="Appearance">
+    <entry name="badgeStyle" type="String">
+      <label>Badge style: square or rounded</label>
+      <default>square</default>
+    </entry>
+    <entry name="colorFailed" type="Color">
+      <label>Failed badge colour</label>
+      <default>#d71920</default>
+    </entry>
+    <entry name="colorDeploying" type="Color">
+      <label>Deploying badge colour</label>
+      <default>#ff9800</default>
+    </entry>
+    <entry name="colorDeployed" type="Color">
+      <label>Deployed badge colour</label>
+      <default>#7ba700</default>
+    </entry>
+    <entry name="colorIdle" type="Color">
+      <label>Idle badge colour</label>
+      <default>#8a8a8a</default>
+    </entry>
+    <entry name="colorCountBackground" type="Color">
+      <label>Count background badge colour</label>
+      <default>#2b2f33</default>
+    </entry>
+  </group>
+</kcfg>
