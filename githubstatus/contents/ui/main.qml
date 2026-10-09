@@ -7,6 +7,7 @@ import org.kde.plasma.components as PlasmaComponents
 import org.kde.plasma.extras as PlasmaExtras
 import org.kde.kirigami as Kirigami
 import org.kde.notification
+import "../code/logic.js" as Logic
 
 PlasmoidItem {
     id: root
@@ -24,9 +25,7 @@ PlasmoidItem {
     property string errorText: ""
     property bool loading: false
 
-    readonly property var visibleComponents: Plasmoid.configuration.showOperational
-        ? components
-        : components.filter(c => c.status !== "operational")
+    readonly property var visibleComponents: Logic.visibleComponents(components, Plasmoid.configuration.showOperational)
 
     // Component states in panel order, worst first. Colours come from the Appearance settings and
     // default to githubstatus.com's own; "glyph" is the square style's symbol, "roundGlyph" the rounded one's.
@@ -42,16 +41,11 @@ PlasmoidItem {
         { key: "operational", label: i18n("Operational"), glyph: "check", roundGlyph: "check", color: Plasmoid.configuration.colorOperational,
           inPanel: Plasmoid.configuration.showOperationalInPanel },
     ]
-    readonly property var stateCounts: {
-        const counts = {}
-        components.forEach(c => counts[c.status] = (counts[c.status] || 0) + 1)
-        return counts
-    }
-    readonly property var visibleStates: componentStates.filter(st => (stateCounts[st.key] || 0) > 0)
+    readonly property var stateCounts: Logic.countStates(components)
+    readonly property var visibleStates: Logic.visibleStates(componentStates, stateCounts)
     // Badges (in the panel, the popup and on the desktop) show the states switched on in the
     // settings, optionally including empty ones.
-    readonly property var panelStates: componentStates.filter(st => st.inPanel
-        && (Plasmoid.configuration.showZeroInPanel || (stateCounts[st.key] || 0) > 0))
+    readonly property var panelStates: Logic.panelStates(componentStates, stateCounts, Plasmoid.configuration.showZeroInPanel)
     readonly property bool badgeMode: Plasmoid.configuration.badgeStyle !== "dot"
 
     // White or near-black, whichever reads better on the given background colour.
@@ -117,14 +111,14 @@ PlasmoidItem {
 
     function apply(data) {
         const previous = indicator
-        indicator = data.status.indicator
-        summary = data.status.description
-        // Skip group headers and the "Visit www.githubstatus.com…" placeholder.
-        components = data.components.filter(c => !c.group && !c.name.startsWith("Visit "))
-        incidents = data.incidents
-        maintenances = data.scheduled_maintenances.filter(m => m.status === "in_progress")
+        const parsed = Logic.parseSummary(data)
+        indicator = parsed.indicator
+        summary = parsed.summary
+        components = parsed.components
+        incidents = parsed.incidents
+        maintenances = parsed.maintenances
 
-        if (previous !== "unknown" && previous !== indicator && Plasmoid.configuration.notifyOnChange) {
+        if (Logic.indicatorChanged(previous, indicator) && Plasmoid.configuration.notifyOnChange) {
             statusNotification.text = incidents.length > 0 ? incidents[0].name : summary
             statusNotification.title = i18n("GitHub: %1", summary)
             statusNotification.sendEvent()

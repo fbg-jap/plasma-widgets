@@ -1,0 +1,29 @@
+name: Widgets
+
+on:
+  push:
+    branches: [main]
+    paths: ["*/contents/**", "tests/**", ".github/workflows/widgets.yml"]
+  pull_request:
+    paths: ["*/contents/**", "tests/**", ".github/workflows/widgets.yml"]
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+
+      - name: Widget logic (contents/code/logic.js)
+        run: node --test 'tests/widgets/*.test.mjs'
+
+      - name: Widget helper scripts (contents/code/*.py, *.sh)
+        run: pip install pytest && python -m pytest -q tests/scripts

@@ -9,6 +9,7 @@ import org.kde.plasma.extras as PlasmaExtras
 import org.kde.plasma.plasma5support as P5Support
 import org.kde.kirigami as Kirigami
 import org.kde.notification
+import "../code/logic.js" as Logic
 
 PlasmoidItem {
     id: root
@@ -27,9 +28,6 @@ PlasmoidItem {
     property string errorText: ""
     property string actionError: ""
 
-    // An open issue counts as new when it was first seen within this many hours.
-    readonly property int newWithinHours: 24
-
     // Issue states in panel order, worst first. Colours come from the Appearance settings.
     // "glyph" (a glyphPaths key) is used by the square style, "roundGlyph" by the rounded one.
     readonly property var issueStates: [
@@ -43,30 +41,21 @@ PlasmoidItem {
           inPanel: Plasmoid.configuration.showResolvedInPanel },
     ]
 
+    // An open issue counts as new when it was first seen within the last 24 hours.
     function isNew(issue) {
-        return Date.now() - new Date(issue.first_seen).getTime() < newWithinHours * 3600 * 1000
+        return Logic.isNew(issue, Date.now())
     }
 
-    readonly property var stateCounts: {
-        const counts = { new: 0, open: 0, muted: 0, resolved: 0 }
-        projects.forEach(p => {
-            p.open.forEach(i => counts[isNew(i) ? "new" : "open"]++)
-            counts.muted += p.muted
-            counts.resolved += p.resolved
-        })
-        return counts
-    }
+    readonly property var stateCounts: Logic.countStates(projects, Date.now())
     readonly property int totalIssues: stateCounts.new + stateCounts.open + stateCounts.muted + stateCounts.resolved
     readonly property int openCount: stateCounts.new + stateCounts.open
     readonly property bool truncated: projects.some(p => p.truncated)
-    readonly property var visibleStates: issueStates.filter(st => (stateCounts[st.key] || 0) > 0)
+    readonly property var visibleStates: Logic.visibleStates(issueStates, stateCounts)
     // Badges (in the panel, the popup and on the desktop) show the states switched on in the
     // settings, optionally including empty ones.
-    readonly property var panelStates: issueStates.filter(st => st.inPanel
-        && (Plasmoid.configuration.showZeroInPanel || (stateCounts[st.key] || 0) > 0))
+    readonly property var panelStates: Logic.panelStates(issueStates, stateCounts, Plasmoid.configuration.showZeroInPanel)
     // Projects with open issues, most recently active first.
-    readonly property var activeProjects: projects.filter(p => p.open.length > 0)
-        .sort((a, b) => new Date(b.open[0].last_seen) - new Date(a.open[0].last_seen))
+    readonly property var activeProjects: Logic.activeProjects(projects)
 
     function stateOf(key) {
         return issueStates.find(st => st.key === key)
@@ -78,15 +67,11 @@ PlasmoidItem {
         return 0.299 * c.r + 0.587 * c.g + 0.114 * c.b > 0.6 ? "#202020" : "white"
     }
 
-    function shellQuote(s) {
-        return "'" + s.replace(/'/g, "'\\''") + "'"
-    }
-
     function refresh() {
         if (!serverUrl) {
             return
         }
-        fetcher.connectSource("python3 -I " + shellQuote(scriptPath) + " fetch " + shellQuote(serverUrl)
+        fetcher.connectSource("python3 -I " + Logic.shellQuote(scriptPath) + " fetch " + Logic.shellQuote(serverUrl)
             + " " + Plasmoid.configuration.maxPages)
     }
 
@@ -95,24 +80,25 @@ PlasmoidItem {
         busy[issue.id] = true
         busyIds = busy
         actionError = ""
-        actions.connectSource("python3 -I " + shellQuote(scriptPath) + " " + action + " " + shellQuote(serverUrl)
-            + " " + shellQuote(issue.id))
+        actions.connectSource("python3 -I " + Logic.shellQuote(scriptPath) + " " + action + " " + Logic.shellQuote(serverUrl)
+            + " " + Logic.shellQuote(issue.id))
     }
 
     function issueUrl(issue) {
-        return serverUrl + "/issues/issue/" + issue.id + "/event/last/"
+        return Logic.issueUrl(serverUrl, issue)
     }
 
     function issueTitle(issue) {
-        return [issue.calculated_type, issue.calculated_value].filter(t => t).join(": ") || i18n("(no message)")
+        return Logic.issueTitle(issue) || i18n("(no message)")
     }
 
     function relativeTime(iso) {
-        const minutes = Math.round((Date.now() - new Date(iso).getTime()) / 60000)
-        if (minutes < 60) return i18np("%1 minute ago", "%1 minutes ago", Math.max(minutes, 1))
-        const hours = Math.round(minutes / 60)
-        if (hours < 24) return i18np("%1 hour ago", "%1 hours ago", hours)
-        return i18np("%1 day ago", "%1 days ago", Math.round(hours / 24))
+        const age = Logic.age(iso, Date.now())
+        switch (age.unit) {
+        case "minute": return i18np("%1 minute ago", "%1 minutes ago", age.count)
+        case "hour": return i18np("%1 hour ago", "%1 hours ago", age.count)
+        default: return i18np("%1 day ago", "%1 days ago", age.count)
+        }
     }
 
     function apply(data) {
@@ -122,16 +108,9 @@ PlasmoidItem {
     }
 
     function notifyAboutNew() {
-        const open = []
-        projects.forEach(p => p.open.forEach(i => open.push({ issue: i, project: p.name })))
-        const fresh = open.filter(o => seenIssueIds && !seenIssueIds[o.issue.id])
-        const seen = {}
-        open.forEach(o => seen[o.issue.id] = true)
-        // Keep remembering earlier issues, so one that's resolved and reopened isn't "new" again.
-        if (seenIssueIds) {
-            Object.keys(seenIssueIds).forEach(id => seen[id] = true)
-        }
-        seenIssueIds = seen
+        const result = Logic.freshIssues(projects, seenIssueIds)
+        const fresh = result.fresh
+        seenIssueIds = result.seen
 
         if (fresh.length === 0 || !Plasmoid.configuration.notifyOnNew) {
             return

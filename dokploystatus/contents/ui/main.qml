@@ -9,6 +9,7 @@ import org.kde.plasma.extras as PlasmaExtras
 import org.kde.plasma.plasma5support as P5Support
 import org.kde.kirigami as Kirigami
 import org.kde.notification
+import "../code/logic.js" as Logic
 
 PlasmoidItem {
     id: root
@@ -46,45 +47,17 @@ PlasmoidItem {
     })
     readonly property var databaseTypes: ["postgres", "mysql", "mariadb", "mongo", "redis"]
 
-    readonly property var services: {
-        const all = []
-        projects.forEach(p => p.environments.forEach(e => e.services.forEach(s => all.push(s))))
-        return all
-    }
-    readonly property var stateCounts: {
-        const counts = {}
-        services.forEach(s => {
-            const key = statusKey(s)
-            counts[key] = (counts[key] || 0) + 1
-        })
-        return counts
-    }
-    readonly property var visibleStates: serviceStates.filter(st => (stateCounts[st.key] || 0) > 0)
+    readonly property var services: Logic.allServices(projects)
+    readonly property var stateCounts: Logic.countStates(services)
+    readonly property var visibleStates: Logic.visibleStates(serviceStates, stateCounts)
     // Badges (in the panel, the popup and on the desktop) show the states switched on in the
     // settings, optionally including empty ones.
-    readonly property var panelStates: serviceStates.filter(st => st.inPanel
-        && (Plasmoid.configuration.showZeroInPanel || (stateCounts[st.key] || 0) > 0))
+    readonly property var panelStates: Logic.panelStates(serviceStates, stateCounts, Plasmoid.configuration.showZeroInPanel)
     // One group per environment that has services: {title, projectId, environmentId, services}.
-    readonly property var groups: {
-        const order = serviceStates.map(st => st.key)
-        const list = []
-        projects.forEach(p => p.environments.forEach(e => {
-            if (e.services.length === 0) {
-                return
-            }
-            list.push({
-                title: p.environments.length > 1 ? p.name + " · " + e.name : p.name,
-                projectId: p.id,
-                environmentId: e.id,
-                services: e.services.slice().sort((a, b) =>
-                    order.indexOf(statusKey(a)) - order.indexOf(statusKey(b)) || a.name.localeCompare(b.name)),
-            })
-        }))
-        return list
-    }
+    readonly property var groups: Logic.groupServices(projects, serviceStates.map(st => st.key))
 
     function statusKey(service) {
-        return ["error", "running", "done", "idle"].includes(service.status) ? service.status : "idle"
+        return Logic.statusKey(service)
     }
 
     function stateOf(key) {
@@ -97,15 +70,11 @@ PlasmoidItem {
         return 0.299 * c.r + 0.587 * c.g + 0.114 * c.b > 0.6 ? "#202020" : "white"
     }
 
-    function shellQuote(s) {
-        return "'" + s.replace(/'/g, "'\\''") + "'"
-    }
-
     function refresh() {
         if (!serverUrl) {
             return
         }
-        fetcher.connectSource("python3 -I " + shellQuote(scriptPath) + " fetch " + shellQuote(serverUrl))
+        fetcher.connectSource("python3 -I " + Logic.shellQuote(scriptPath) + " fetch " + Logic.shellQuote(serverUrl))
     }
 
     function runAction(service, action) {
@@ -113,13 +82,12 @@ PlasmoidItem {
         busy[service.id] = true
         busyIds = busy
         actionError = ""
-        actions.connectSource("python3 -I " + shellQuote(scriptPath) + " " + action + " " + shellQuote(serverUrl)
-            + " " + service.type + " " + shellQuote(service.id))
+        actions.connectSource("python3 -I " + Logic.shellQuote(scriptPath) + " " + action + " " + Logic.shellQuote(serverUrl)
+            + " " + service.type + " " + Logic.shellQuote(service.id))
     }
 
     function serviceUrl(group, service) {
-        return serverUrl + "/dashboard/project/" + group.projectId + "/environment/" + group.environmentId
-            + "/services/" + service.type + "/" + service.id
+        return Logic.serviceUrl(serverUrl, group, service)
     }
 
     function apply(data) {
@@ -129,10 +97,9 @@ PlasmoidItem {
     }
 
     function notifyAboutFailures() {
-        const fresh = services.filter(s => previousStatus && s.status === "error" && previousStatus[s.id] !== "error")
-        const statuses = {}
-        services.forEach(s => statuses[s.id] = s.status)
-        previousStatus = statuses
+        const result = Logic.freshFailures(services, previousStatus)
+        const fresh = result.fresh
+        previousStatus = result.statuses
 
         if (fresh.length === 0 || !Plasmoid.configuration.notifyOnFailure) {
             return

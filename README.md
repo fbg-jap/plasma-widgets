@@ -128,6 +128,15 @@ plasmawindowed dk.madebypless.githubstatus
 
 `plasmoidviewer` from the `plasma-sdk` package is handy for testing panel and desktop layouts. QML errors from `plasmawindowed` go to the journal (`journalctl --user -f`).
 
+Each widget's logic (parsing, counting, grouping, deciding what to notify about) lives in `contents/code/logic.js`, free of Plasma and i18n, so it can be tested without a desktop. `main.qml` imports it as `Logic` and keeps the UI, settings, translations and notifications. Run the tests with:
+
+```sh
+node --test 'tests/widgets/*.test.mjs'   # logic.js of every widget (Node 22 or newer, no npm packages)
+python3 -m pytest tests/scripts          # the helper scripts, against a local fake server (needs pytest and curl)
+```
+
+The [Widgets workflow](.github/workflows/widgets.yml) runs both on every change.
+
 ## License
 
 GPL-2.0-or-later. See [LICENSE](LICENSE).

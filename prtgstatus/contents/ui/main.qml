@@ -9,6 +9,7 @@ import org.kde.plasma.extras as PlasmaExtras
 import org.kde.plasma.plasma5support as P5Support
 import org.kde.kirigami as Kirigami
 import org.kde.notification
+import "../code/logic.js" as Logic
 
 PlasmoidItem {
     id: root
@@ -35,29 +36,28 @@ PlasmoidItem {
     // Appearance settings, which default to PRTG's own so the badges match its web interface.
     // "glyph" (a glyphPaths key) is used by the square style, "roundGlyph" by the rounded style (PRTG's newer look);
     // "check" adds the small tick PRTG puts on acknowledged alarms. "inPanel" is the
-    // per-state switch from the General settings.
+    // per-state switch from the General settings. Logic.stateCodes maps PRTG's status codes to these keys.
     readonly property var sensorStates: [
         { key: "down", label: i18n("Down"), glyph: "arrowDown", roundGlyph: "cross", color: Plasmoid.configuration.colorDown,
-          inPanel: Plasmoid.configuration.showDownInPanel, codes: [5, 14] },
+          inPanel: Plasmoid.configuration.showDownInPanel },
         { key: "acknowledged", label: i18n("Down (acknowledged)"), glyph: "check", roundGlyph: "cross", check: true, color: Plasmoid.configuration.colorAcknowledged,
-          inPanel: Plasmoid.configuration.showAcknowledgedInPanel, codes: [13] },
+          inPanel: Plasmoid.configuration.showAcknowledgedInPanel },
         { key: "warning", label: i18n("Warning"), glyph: "exclamation", roundGlyph: "exclamation", color: Plasmoid.configuration.colorWarning,
-          inPanel: Plasmoid.configuration.showWarningInPanel, codes: [4] },
+          inPanel: Plasmoid.configuration.showWarningInPanel },
         { key: "unusual", label: i18n("Unusual"), glyph: "wave", roundGlyph: "wave", color: Plasmoid.configuration.colorUnusual,
-          inPanel: Plasmoid.configuration.showUnusualInPanel, codes: [10] },
+          inPanel: Plasmoid.configuration.showUnusualInPanel },
         { key: "unknown", label: i18n("Unknown"), glyph: "question", roundGlyph: "dash", color: Plasmoid.configuration.colorUnknown,
-          inPanel: Plasmoid.configuration.showUnknownInPanel, codes: [1, 2, 6] },
+          inPanel: Plasmoid.configuration.showUnknownInPanel },
         { key: "paused", label: i18n("Paused"), glyph: "pause", roundGlyph: "pause", color: Plasmoid.configuration.colorPaused,
-          inPanel: Plasmoid.configuration.showPausedInPanel, codes: [7, 8, 9, 11, 12] },
+          inPanel: Plasmoid.configuration.showPausedInPanel },
         { key: "up", label: i18n("Up"), glyph: "check", roundGlyph: "check", color: Plasmoid.configuration.colorUp,
-          inPanel: Plasmoid.configuration.showUpInPanel, codes: [3] },
+          inPanel: Plasmoid.configuration.showUpInPanel },
     ]
-    readonly property var visibleStates: sensorStates.filter(st => (stateCounts[st.key] || 0) > 0)
+    readonly property var visibleStates: Logic.visibleStates(sensorStates, stateCounts)
     // Badges (in the panel, the popup and on the desktop) show the states switched on in the
     // settings, optionally including empty ones.
-    readonly property var panelStates: sensorStates.filter(st => st.inPanel
-        && (Plasmoid.configuration.showZeroInPanel || (stateCounts[st.key] || 0) > 0))
-    readonly property int totalSensors: Object.values(stateCounts).reduce((sum, n) => sum + n, 0)
+    readonly property var panelStates: Logic.panelStates(sensorStates, stateCounts, Plasmoid.configuration.showZeroInPanel)
+    readonly property int totalSensors: Logic.total(stateCounts)
 
     // White or near-black, whichever reads better on the given background colour.
     function contrastText(background) {
@@ -73,44 +73,33 @@ PlasmoidItem {
     readonly property color warningColor: stateColor("warning")
     readonly property color unusualColor: stateColor("unusual")
 
-    function shellQuote(s) {
-        return "'" + s.replace(/'/g, "'\\''") + "'"
-    }
-
     function refresh() {
         if (!serverUrl) {
             return
         }
         loading = true
-        executable.exec("sh " + shellQuote(scriptPath) + " " + shellQuote(serverUrl))
+        executable.exec("sh " + Logic.shellQuote(scriptPath) + " " + Logic.shellQuote(serverUrl))
     }
 
     function sensorUrl(sensor) {
-        return serverUrl + "/sensor.htm?id=" + sensor.objid
+        return Logic.sensorUrl(serverUrl, sensor)
     }
 
     function apply(data) {
-        const counts = {}
-        data.all.sensors.forEach(s => {
-            const st = sensorStates.find(st => st.codes.includes(s.status_raw)) || sensorStates[sensorStates.length - 1]
-            counts[st.key] = (counts[st.key] || 0) + 1
-        })
-        stateCounts = counts
-
-        const sensors = data.problems.sensors
-        down = sensors.filter(s => s.status_raw === 5 || s.status_raw === 14)
-        acknowledged = sensors.filter(s => s.status_raw === 13)
-        warning = sensors.filter(s => s.status_raw === 4)
-        unusual = sensors.filter(s => s.status_raw === 10)
+        stateCounts = Logic.countStates(data.all.sensors)
+        const problems = Logic.splitProblems(data.problems.sensors)
+        down = problems.down
+        acknowledged = problems.acknowledged
+        warning = problems.warning
+        unusual = problems.unusual
         loaded = true
         notifyAboutNewDown()
     }
 
     function notifyAboutNewDown() {
-        const fresh = down.filter(s => seenDownIds && !seenDownIds[s.objid])
-        const seen = {}
-        down.forEach(s => seen[s.objid] = true)
-        seenDownIds = seen
+        const result = Logic.freshDown(down, seenDownIds)
+        const fresh = result.fresh
+        seenDownIds = result.seen
 
         if (fresh.length === 0 || !Plasmoid.configuration.notifyOnDown) {
             return

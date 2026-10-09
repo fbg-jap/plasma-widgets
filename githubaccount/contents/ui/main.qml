@@ -7,6 +7,7 @@ import org.kde.plasma.extras as PlasmaExtras
 import org.kde.plasma.plasma5support as P5Support
 import org.kde.kirigami as Kirigami
 import org.kde.notification
+import "../code/logic.js" as Logic
 
 PlasmoidItem {
     id: root
@@ -31,10 +32,10 @@ PlasmoidItem {
     readonly property var unreadNotifications: notifications.filter(n => n.unread)
 
     // CI state of your open PRs plus the main branch of your recently pushed repos.
-    readonly property var ciStates: pullRequests.map(pr => pr.ci).concat(repos.map(r => r.ci))
-    readonly property int ciFailing: ciStates.filter(st => st === "FAILURE" || st === "ERROR").length
-    readonly property int ciRunning: ciStates.filter(st => st === "PENDING" || st === "EXPECTED").length
-    readonly property int ciPassing: ciStates.filter(st => st === "SUCCESS").length
+    readonly property var ciCounts: Logic.ciCounts(pullRequests, repos)
+    readonly property int ciFailing: ciCounts.failing
+    readonly property int ciRunning: ciCounts.running
+    readonly property int ciPassing: ciCounts.passing
 
     // Badge and dot colours from the Appearance settings; they default to GitHub's own colours.
     readonly property color reviewsColor: Plasmoid.configuration.colorReviews
@@ -63,55 +64,39 @@ PlasmoidItem {
     readonly property var visibleBadges: countBadges.filter(b => b.count > 0)
 
     function ciColor(state) {
-        switch (state) {
-        case "SUCCESS": return ciPassingColor
-        case "FAILURE":
-        case "ERROR": return ciFailingColor
-        case "PENDING":
-        case "EXPECTED": return ciRunningColor
+        switch (Logic.ciCategory(state)) {
+        case "passing": return ciPassingColor
+        case "failing": return ciFailingColor
+        case "running": return ciRunningColor
         default: return Kirigami.Theme.disabledTextColor
         }
     }
 
     function ciLabel(state) {
-        switch (state) {
-        case "SUCCESS": return i18n("Checks passed")
-        case "FAILURE":
-        case "ERROR": return i18n("Checks failed")
-        case "PENDING":
-        case "EXPECTED": return i18n("Checks running")
+        switch (Logic.ciCategory(state)) {
+        case "passing": return i18n("Checks passed")
+        case "failing": return i18n("Checks failed")
+        case "running": return i18n("Checks running")
         default: return i18n("No checks")
         }
     }
 
     function notificationUrl(n) {
-        if (n.subject.type === "Release") {
-            return n.repository.html_url + "/releases"
-        }
-        if (!n.subject.url) {
-            return "https://github.com/notifications"
-        }
-        return n.subject.url
-            .replace("https://api.github.com/repos/", "https://github.com/")
-            .replace("/pulls/", "/pull/")
-            .replace("/commits/", "/commit/")
+        return Logic.notificationUrl(n)
     }
 
     function relativeTime(iso) {
-        const minutes = Math.round((Date.now() - new Date(iso).getTime()) / 60000)
-        if (minutes < 60) return i18np("%1 minute ago", "%1 minutes ago", Math.max(minutes, 1))
-        const hours = Math.round(minutes / 60)
-        if (hours < 24) return i18np("%1 hour ago", "%1 hours ago", hours)
-        return i18np("%1 day ago", "%1 days ago", Math.round(hours / 24))
-    }
-
-    function shellQuote(s) {
-        return "'" + s.replace(/'/g, "'\\''") + "'"
+        const age = Logic.age(iso, Date.now())
+        switch (age.unit) {
+        case "minute": return i18np("%1 minute ago", "%1 minutes ago", age.count)
+        case "hour": return i18np("%1 hour ago", "%1 hours ago", age.count)
+        default: return i18np("%1 day ago", "%1 days ago", age.count)
+        }
     }
 
     function refresh(markRead) {
         loading = true
-        executable.exec("sh " + shellQuote(scriptPath) + " " + shellQuote(account) + (markRead ? " mark-read" : ""))
+        executable.exec("sh " + Logic.shellQuote(scriptPath) + " " + Logic.shellQuote(account) + (markRead ? " mark-read" : ""))
     }
 
     onAccountChanged: {
@@ -128,36 +113,21 @@ PlasmoidItem {
     }
 
     function apply(data) {
-        const gql = data.graphql.data
-        login = gql.viewer.login
-        notifications = data.notifications
-        reviews = gql.reviews.nodes.filter(pr => pr.url)
-        reviewCount = gql.reviews.issueCount
-        prCount = gql.viewer.pullRequests.totalCount
-        pullRequests = gql.viewer.pullRequests.nodes.map(pr => ({
-            title: pr.title,
-            url: pr.url,
-            number: pr.number,
-            isDraft: pr.isDraft,
-            repo: pr.repository.nameWithOwner,
-            ci: pr.commits.nodes.length && pr.commits.nodes[0].commit.statusCheckRollup
-                ? pr.commits.nodes[0].commit.statusCheckRollup.state : null
-        }))
-        repos = gql.viewer.repositories.nodes.map(r => ({
-            name: r.nameWithOwner,
-            url: r.url,
-            pushedAt: r.pushedAt,
-            ci: r.defaultBranchRef && r.defaultBranchRef.target.statusCheckRollup
-                ? r.defaultBranchRef.target.statusCheckRollup.state : null
-        }))
+        const parsed = Logic.parse(data)
+        login = parsed.login
+        notifications = parsed.notifications
+        reviews = parsed.reviews
+        reviewCount = parsed.reviewCount
+        prCount = parsed.prCount
+        pullRequests = parsed.pullRequests
+        repos = parsed.repos
         notifyAboutNew()
     }
 
     function notifyAboutNew() {
-        const fresh = unreadNotifications.filter(n => seenNotificationIds && !seenNotificationIds[n.id])
-        const seen = {}
-        notifications.forEach(n => seen[n.id] = true)
-        seenNotificationIds = seen
+        const result = Logic.freshNotifications(notifications, seenNotificationIds)
+        const fresh = result.fresh
+        seenNotificationIds = result.seen
 
         if (fresh.length === 0 || !Plasmoid.configuration.notifyOnNew) {
             return

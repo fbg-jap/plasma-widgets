@@ -8,6 +8,7 @@ import org.kde.plasma.extras as PlasmaExtras
 import org.kde.plasma.plasma5support as P5Support
 import org.kde.kirigami as Kirigami
 import org.kde.notification
+import "../code/logic.js" as Logic
 
 PlasmoidItem {
     id: root
@@ -28,10 +29,6 @@ PlasmoidItem {
     property string errorText: ""
     property string actionError: ""
 
-    // Docker exit codes that mean "stopped on purpose" (clean exit, Ctrl+C, docker stop's
-    // SIGTERM, or its SIGKILL after the timeout) rather than a crash.
-    readonly property var stoppedExitCodes: [0, 130, 137, 143]
-
     // Container states in panel order, worst first. Colours come from the Appearance settings.
     // "glyph" is used by the square style, "roundGlyph" by the rounded one.
     readonly property var containerStates: [
@@ -48,26 +45,14 @@ PlasmoidItem {
         { key: "running", label: i18n("Running"), glyph: "play", roundGlyph: "play", color: Plasmoid.configuration.colorRunning,
           inPanel: Plasmoid.configuration.showRunningInPanel },
     ]
-    readonly property var visibleStates: containerStates.filter(st => (stateCounts[st.key] || 0) > 0)
+    readonly property var visibleStates: Logic.visibleStates(containerStates, stateCounts)
     // Badges (in the panel, the popup and on the desktop) show the states switched on in the
     // settings, optionally including empty ones.
-    readonly property var panelStates: containerStates.filter(st => st.inPanel
-        && (Plasmoid.configuration.showZeroInPanel || (stateCounts[st.key] || 0) > 0))
+    readonly property var panelStates: Logic.panelStates(containerStates, stateCounts, Plasmoid.configuration.showZeroInPanel)
     readonly property int problemCount: (stateCounts.failed || 0) + (stateCounts.unhealthy || 0)
 
     // Containers grouped by Compose project (standalone ones last), problems first within a group.
-    readonly property var groups: {
-        const order = containerStates.map(st => st.key)
-        const byProject = {}
-        containers.forEach(c => (byProject[c.project] = byProject[c.project] || []).push(c))
-        return Object.keys(byProject)
-            .sort((a, b) => (a === "") - (b === "") || a.localeCompare(b))
-            .map(project => ({
-                project: project,
-                containers: byProject[project].sort((a, b) =>
-                    order.indexOf(a.stateKey) - order.indexOf(b.stateKey) || a.name.localeCompare(b.name))
-            }))
-    }
+    readonly property var groups: Logic.groupContainers(containers, containerStates.map(st => st.key))
 
     function stateOf(key) {
         return containerStates.find(st => st.key === key)
@@ -79,12 +64,8 @@ PlasmoidItem {
         return 0.299 * c.r + 0.587 * c.g + 0.114 * c.b > 0.6 ? "#202020" : "white"
     }
 
-    function shellQuote(s) {
-        return "'" + s.replace(/'/g, "'\\''") + "'"
-    }
-
     function refresh() {
-        fetcher.connectSource("sh " + shellQuote(codeDir + "fetch.sh") + " " + shellQuote(dockerContext))
+        fetcher.connectSource("sh " + Logic.shellQuote(codeDir + "fetch.sh") + " " + Logic.shellQuote(dockerContext))
     }
 
     function runAction(container, action) {
@@ -92,74 +73,22 @@ PlasmoidItem {
         busy[container.id] = true
         busyIds = busy
         actionError = ""
-        actions.connectSource("sh " + shellQuote(codeDir + "action.sh") + " " + shellQuote(dockerContext)
-            + " " + action + " " + shellQuote(container.id))
-    }
-
-    function label(labels, key) {
-        const match = new RegExp("(?:^|,)" + key.replace(/\./g, "\\.") + "=([^,]*)").exec(labels || "")
-        return match ? match[1] : ""
-    }
-
-    function classify(c) {
-        switch (c.State) {
-        case "restarting": return "restarting"
-        case "paused": return "paused"
-        case "running":
-            return c.HealthStatus === "unhealthy" || /\(unhealthy\)/.test(c.Status) ? "unhealthy" : "running"
-        case "dead": return "failed"
-        case "exited": {
-            const exit = /Exited \((\d+)\)/.exec(c.Status)
-            return exit && !stoppedExitCodes.includes(parseInt(exit[1])) ? "failed" : "stopped"
-        }
-        default: return "stopped" // created, removing
-        }
-    }
-
-    // "0.0.0.0:8888->80/tcp, [::]:8888->80/tcp" -> "8888→80"
-    function shortPorts(ports) {
-        const seen = []
-        const re = /:(\d+)->(\d+)/g
-        let m
-        while ((m = re.exec(ports || "")) !== null) {
-            const p = m[1] + "→" + m[2]
-            if (!seen.includes(p)) seen.push(p)
-        }
-        return seen.join(", ")
-    }
-
-    function shortImage(image) {
-        return image.startsWith("sha256:") ? image.slice(7, 19) : image
+        actions.connectSource("sh " + Logic.shellQuote(codeDir + "action.sh") + " " + Logic.shellQuote(dockerContext)
+            + " " + action + " " + Logic.shellQuote(container.id))
     }
 
     function apply(stdout) {
-        const list = stdout.split("\n").filter(line => line.trim()).map(line => JSON.parse(line)).map(c => {
-            const project = label(c.Labels, "com.docker.compose.project")
-            return {
-                id: c.ID,
-                name: label(c.Labels, "com.docker.compose.service") || c.Names,
-                fullName: c.Names,
-                project: project,
-                image: shortImage(c.Image),
-                stateKey: classify(c),
-                status: c.Status,
-                ports: shortPorts(c.Ports),
-            }
-        })
-        const counts = {}
-        list.forEach(c => counts[c.stateKey] = (counts[c.stateKey] || 0) + 1)
+        const list = Logic.parseContainers(stdout)
         containers = list
-        stateCounts = counts
+        stateCounts = Logic.countStates(list)
         loaded = true
         notifyAboutProblems()
     }
 
     function notifyAboutProblems() {
-        const isProblem = key => key === "failed" || key === "unhealthy"
-        const fresh = containers.filter(c => previousStates && isProblem(c.stateKey) && previousStates[c.id] !== c.stateKey)
-        const states = {}
-        containers.forEach(c => states[c.id] = c.stateKey)
-        previousStates = states
+        const result = Logic.freshProblems(containers, previousStates)
+        const fresh = result.fresh
+        previousStates = result.states
 
         if (fresh.length === 0 || !Plasmoid.configuration.notifyOnProblem) {
             return
