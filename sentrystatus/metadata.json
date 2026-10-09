@@ -1,0 +1,21 @@
+{
+    "KPlugin": {
+        "Authors": [
+            {
+                "Name": "Jakob Pless",
+                "Email": "pless84@gmail.com"
+            }
+        ],
+        "Category": "System Information",
+        "Description": "Sentry error tracking: new, open, archived and resolved issues as status badges, with resolve and archive per issue",
+        "Icon": "script-error",
+        "Id": "dk.madebypless.sentrystatus",
+        "License": "GPL-2.0-or-later",
+        "Name": "Sentry Status",
+        "Version": "1.0",
+        "Website": "https://github.com/pless84/plasma-widgets",
+        "BugReportUrl": "https://github.com/pless84/plasma-widgets/issues"
+    },
+    "KPackageStructure": "Plasma/Applet",
+    "X-Plasma-API-Minimum-Version": "6.0"
+}

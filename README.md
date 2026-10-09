@@ -1,6 +1,6 @@
 # Plasma Widgets
 
-KDE Plasma 6 widgets for keeping an eye on GitHub, PRTG, Docker, Bugsink, Dokploy and self-hosted GitHub Actions runners from the panel or desktop.
+KDE Plasma 6 widgets for keeping an eye on GitHub, PRTG, Docker, Bugsink, Sentry, Dokploy and self-hosted GitHub Actions runners from the panel or desktop.
 
 **Not on KDE Plasma?** The [Status Badges tray app](tray/) brings the same badges to Windows, macOS and any Linux desktop with a system tray.
 
@@ -11,6 +11,7 @@ KDE Plasma 6 widgets for keeping an eye on GitHub, PRTG, Docker, Bugsink, Dokplo
 | [PRTG Status](prtgstatus) | `dk.madebypless.prtgstatus` | PRTG-style status badges (down, warning, unusual, paused, up…), with the problem sensors in a popup |
 | [Docker Status](dockerstatus) | `dk.madebypless.dockerstatus` | Status badges for your containers (failed, unhealthy, restarting, paused, stopped, running), with start / stop / restart per container |
 | [Bugsink Status](bugsinkstatus) | `dk.madebypless.bugsinkstatus` | Status badges for your Bugsink issues (new, open, muted, resolved), with the open issues per project and resolve / mute buttons |
+| [Sentry Status](sentrystatus) | `dk.madebypless.sentrystatus` | Status badges for your Sentry issues (new, open, archived, resolved), with the unresolved issues per project and resolve / archive buttons |
 | [Dokploy Status](dokploystatus) | `dk.madebypless.dokploystatus` | Status badges for your Dokploy applications, Compose stacks and databases (failed, deploying, deployed, idle), with deploy / start / stop buttons |
 | [Runner Status](runnerstatus) | `dk.madebypless.runnerstatus` | Status badges for self-hosted GitHub Actions runners (offline, busy, idle) from a runner dashboard's `/api/status`, with the running job and last result per runner |
 
@@ -64,6 +65,12 @@ Error tracking from a [Bugsink](https://www.bugsink.com/) server: badges for new
 
 Muted and resolved badges are off by default; switch them on under **Show badges**. Bugsink's API can't filter issues by status, so the widget reads each project's most recently seen issues (10 pages by default, adjustable) to count them.
 
+### Sentry Status
+
+The same idea for [Sentry](https://sentry.io/), on sentry.io or your own server: badges for new (first seen in the last 24 hours), open, archived and resolved issues across your organization. Click for the unresolved issues grouped by project. Click an issue to open it in Sentry, or resolve or archive it from the popup.
+
+Archived and resolved badges are off by default; switch them on under **Show badges**. The counts come from Sentry's search and cover issues seen in the last 90 days. The popup lists the 100 most recently seen unresolved issues; you can raise that under **General**.
+
 ### Dokploy Status
 
 Deployments from a [Dokploy](https://dokploy.com/) server: badges for failed, deploying, deployed and idle services, counting applications, Compose stacks and databases. Click for every service grouped by project and environment. Click a service to open it in Dokploy, or deploy, start or stop it from the popup:
@@ -106,6 +113,7 @@ To update after pulling changes, use `-u` instead of `-i`. A widget already on t
 - **GitHub Account:** the [GitHub CLI](https://cli.github.com/) (`gh`), logged in with `gh auth login`. The widget uses its stored login and never handles a token itself. It can show any account `gh` is logged in to, picked in its settings, so you can add one widget per account. Run `gh auth login` again to add more accounts.
 - **PRTG Status:** `curl` and `secret-tool` (libsecret), and PRTG 22.2 or newer for API keys.
 - **Bugsink Status:** `python3` and `secret-tool` (libsecret), and a Bugsink API token. Create one in Bugsink under Tokens (`/bsmain/auth_tokens/`), paste it into the widget's settings and click **Save to Keyring**.
+- **Sentry Status:** `python3` and `secret-tool` (libsecret), your organization's slug, and a Sentry personal token with the `event:read` and `event:write` scopes. Create one under User Settings → Personal Tokens, paste it into the widget's settings and click **Save to Keyring**. For an organization in the EU region, set the server to `https://de.sentry.io`.
 - **Dokploy Status:** `python3` and `secret-tool` (libsecret), and a Dokploy API key. Generate one in Dokploy under Settings → Profile → API/CLI, paste it into the widget's settings and click **Save to Keyring**.
 - **Docker Status:** the `docker` CLI with access to the daemon (e.g. your user in the `docker` group). Any `docker context` works, including Podman.
 

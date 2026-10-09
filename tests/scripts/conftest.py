@@ -24,8 +24,8 @@ class FakeServer:
         self.url = f"http://127.0.0.1:{self.httpd.server_address[1]}"
         threading.Thread(target=self.httpd.serve_forever, daemon=True).start()
 
-    def add(self, route: str, body, status: int = 200):
-        self.routes[route] = (status, body)
+    def add(self, route: str, body, status: int = 200, headers: dict | None = None):
+        self.routes[route] = (status, body, headers or {})
 
     def _handler(self):
         server = self
@@ -40,12 +40,14 @@ class FakeServer:
                 server.requests.append({"method": self.command, "path": self.path, "headers": {k.lower(): v for k, v in self.headers.items()},
                                         "body": json.loads(body) if body else None})
                 path_only = self.path.split("?")[0]
-                status, payload = server.routes.get(f"{self.command} {self.path}") \
-                    or server.routes.get(f"{self.command} {path_only}") or (404, {"message": "no route"})
+                status, payload, headers = server.routes.get(f"{self.command} {self.path}") \
+                    or server.routes.get(f"{self.command} {path_only}") or (404, {"message": "no route"}, {})
                 data = b"" if payload is None else json.dumps(payload).encode()
                 self.send_response(status)
                 self.send_header("Content-Type", "application/json")
                 self.send_header("Content-Length", str(len(data)))
+                for name, value in headers.items():
+                    self.send_header(name, value)
                 self.end_headers()
                 self.wfile.write(data)
 
