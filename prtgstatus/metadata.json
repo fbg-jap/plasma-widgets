@@ -2,7 +2,8 @@
     "KPlugin": {
         "Authors": [
             {
-                "Name": "jap"
+                "Name": "Jakob Pless",
+                "Email": "pless84@gmail.com"
             }
         ],
         "Category": "System Information",
@@ -11,7 +12,9 @@
         "Id": "dk.madebypless.prtgstatus",
         "License": "GPL-2.0-or-later",
         "Name": "PRTG Status",
-        "Version": "1.0"
+        "Version": "1.1",
+        "Website": "https://github.com/pless84/plasma-widgets",
+        "BugReportUrl": "https://github.com/pless84/plasma-widgets/issues"
     },
     "KPackageStructure": "Plasma/Applet",
     "X-Plasma-API-Minimum-Version": "6.0"
