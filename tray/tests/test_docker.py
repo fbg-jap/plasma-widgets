@@ -2,8 +2,8 @@ import json
 
 import pytest
 
-from statusbadges.model import ProviderError
-from statusbadges.providers.docker import DockerStatus, classify, label, short_ports
+from statusbadges.model import Item, ProviderError
+from statusbadges.providers.docker import DockerStatus, classify, label, short_ports, stack_actions
 
 
 @pytest.mark.parametrize("state, status, health, expected", [
@@ -75,6 +75,20 @@ def test_fetch_counts_and_groups_by_compose_project(docker):
     assert shop.items[1].actions == []                           # paused: nothing to offer
     assert [a.id for a in shop.items[0].actions] == ["start"]
     assert standalone.items[0].subtitle.startswith("0123456789ab · ")   # image id shortened
+    # The stack is half up, so it can be started, restarted and stopped as a whole.
+    assert shop.id == "project:shop"
+    assert [a.id for a in shop.actions] == ["start", "restart", "stop"]
+    assert standalone.id == "" and standalone.actions == []
+
+
+@pytest.mark.parametrize("states, expected", [
+    (["running", "unhealthy"], ["restart", "stop"]),
+    (["stopped", "failed"], ["start"]),
+    (["restarting"], ["restart", "stop"]),
+    (["paused"], []),                                            # unpause isn't offered
+])
+def test_stack_actions(states, expected):
+    assert [a.id for a in stack_actions([Item(str(n), "c", state=s) for n, s in enumerate(states)])] == expected
 
 
 def test_fetch_uses_the_chosen_context(docker):
@@ -89,6 +103,16 @@ def test_run_action(docker):
     assert docker.calls[-1]["args"] == ["docker", "restart", "a1"]
     with pytest.raises(ProviderError, match="Unknown action"):
         DockerStatus({}).run_action("a1", "rm")
+
+
+def test_run_stack_action(docker):
+    docker.add(["docker", "compose"], "")
+    DockerStatus({}).run_action("project:shop", "stop")
+    assert docker.calls[-1]["args"] == ["docker", "compose", "--project-name", "shop", "stop"]
+    DockerStatus({"context": "colima"}).run_action("project:shop", "start")
+    assert docker.calls[-1]["args"] == ["docker", "--context", "colima", "compose", "--project-name", "shop", "start"]
+    with pytest.raises(ProviderError, match="Unknown action"):
+        DockerStatus({}).run_action("project:shop", "down")
 
 
 def test_choices_lists_contexts_and_survives_a_missing_cli(cli):

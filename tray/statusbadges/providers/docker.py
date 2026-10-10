@@ -8,6 +8,8 @@ from statusbadges.providers.base import Field, Provider, registry
 
 # Exit codes that mean "stopped on purpose": clean exit, Ctrl+C, docker stop's SIGTERM or SIGKILL.
 STOPPED_EXIT_CODES = {0, 130, 137, 143}
+# Section ids for Compose stacks, as passed to run_action. Container ids are hex, so they never clash.
+STACK_PREFIX = "project:"
 
 
 def label(labels: str, key: str) -> str:
@@ -39,11 +41,26 @@ def short_ports(ports: str) -> str:
     return ", ".join(seen)
 
 
+def is_active(state: str) -> bool:
+    """Up (can be stopped or restarted) rather than down (can be started). Paused is neither."""
+    return state in ("running", "unhealthy", "restarting")
+
+
+def stack_actions(items: list[Item]) -> list[Action]:
+    """A Compose stack's buttons: start when any container is down, restart and stop when any is up."""
+    actions = []
+    if any(not is_active(i.state) and i.state != "paused" for i in items):
+        actions.append(Action("start", "Start stack", "play"))
+    if any(is_active(i.state) for i in items):
+        actions += [Action("restart", "Restart stack", "restart"), Action("stop", "Stop stack", "stop")]
+    return actions
+
+
 @registry.add
 class DockerStatus(Provider):
     kind = "docker"
     name = "Docker Status"
-    description = "Your Docker containers, with start, stop and restart. Needs the docker CLI."
+    description = "Your Docker containers, with start, stop and restart per container and per Compose stack. Needs the docker CLI."
     default_interval = 15
     states = [
         State("failed", "Failed", "cross", "#d71920", 3),
@@ -79,14 +96,14 @@ class DockerStatus(Provider):
             project = label(c.get("Labels", ""), "com.docker.compose.project")
             name = label(c.get("Labels", ""), "com.docker.compose.service") or c["Names"]
             image = c["Image"][7:19] if c["Image"].startswith("sha256:") else c["Image"]
-            active = state in ("running", "unhealthy", "restarting")
-            actions = ([Action("restart", "Restart", "restart"), Action("stop", "Stop", "stop")] if active
+            actions = ([Action("restart", "Restart", "restart"), Action("stop", "Stop", "stop")] if is_active(state)
                        else [] if state == "paused" else [Action("start", "Start", "play")])
             item = Item(c["ID"], name, " · ".join(t for t in (image, c["Status"], short_ports(c.get("Ports", ""))) if t),
                         state, bold=state in ("failed", "unhealthy"), actions=actions)
             groups.setdefault(project, []).append(item)
         sections = [Section(project or "Standalone containers",
-                            sorted(items, key=lambda i: (order.index(i.state), i.title)))
+                            sorted(items, key=lambda i: (order.index(i.state), i.title)),
+                            STACK_PREFIX + project if project else "", stack_actions(items) if project else [])
                     for project, items in sorted(groups.items(), key=lambda kv: (kv[0] == "", kv[0]))]
         context = str(self.setting("context")).strip()
         return Result(counts, sections, context or "current context")
@@ -94,4 +111,8 @@ class DockerStatus(Provider):
     def run_action(self, item_id: str, action: str) -> None:
         if action not in ("start", "stop", "restart"):
             raise ProviderError(f"Unknown action {action}")
-        self._docker(action, item_id)
+        if item_id.startswith(STACK_PREFIX):
+            # By project name only, so the compose file doesn't have to be on this machine.
+            self._docker("compose", "--project-name", item_id[len(STACK_PREFIX):], action)
+        else:
+            self._docker(action, item_id)

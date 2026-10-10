@@ -35,6 +35,8 @@ class Item:
 class Section:
     title: str
     items: list[Item]
+    id: str = ""         # passed back to Provider.run_action for the section's own actions
+    actions: list[Action] = field(default_factory=list)
 
 
 @dataclass

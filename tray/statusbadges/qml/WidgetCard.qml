@@ -100,14 +100,41 @@ Rectangle {
                     Layout.fillWidth: true
                     spacing: 0
 
-                    Label {
+                    // The title, and the section's own actions if any (e.g. a whole Compose stack).
+                    RowLayout {
+                        id: sectionHeader
+                        readonly property bool busy: section.modelData.id !== ""
+                            && card.widget.busyItems.indexOf(section.modelData.id) >= 0
                         Layout.fillWidth: true
                         Layout.topMargin: 6
-                        text: section.modelData.title
-                        textFormat: Text.PlainText
-                        font.bold: true
-                        opacity: 0.75
-                        elide: Text.ElideRight
+                        Layout.rightMargin: 2
+                        spacing: 8
+
+                        Label {
+                            Layout.fillWidth: true
+                            text: section.modelData.title
+                            textFormat: Text.PlainText
+                            font.bold: true
+                            opacity: 0.75
+                            elide: Text.ElideRight
+                        }
+
+                        BusyIndicator {
+                            Layout.preferredWidth: 20
+                            Layout.preferredHeight: 20
+                            running: sectionHeader.busy
+                            visible: running
+                        }
+
+                        Repeater {
+                            model: sectionHeader.busy ? [] : section.modelData.actions
+                            GlyphButton {
+                                required property var modelData
+                                glyph: modelData.glyph
+                                tip: modelData.label
+                                onClicked: controller.runAction(card.widget.wid, section.modelData.id, modelData.id)
+                            }
+                        }
                     }
 
                     Repeater {
@@ -117,6 +144,7 @@ Rectangle {
                             id: row
                             required property var modelData
                             readonly property bool busy: card.widget.busyItems.indexOf(modelData.id) >= 0
+                                || sectionHeader.busy
                             Layout.fillWidth: true
                             implicitHeight: rowLayout.implicitHeight + 8
                             radius: 4

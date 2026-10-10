@@ -3,7 +3,7 @@
 A cross-platform tray app for Windows, macOS and Linux with the same status badges as the KDE Plasma widgets in this repository: GitHub Status, GitHub Account, PRTG, Docker, Bugsink, Sentry, Dokploy and self-hosted GitHub Actions runners.
 
 - **Tray icon:** a round badge in the colour of the most serious problem, with the number of problems, or a green tick when everything is fine. Hover for a summary of every widget.
-- **Popup:** click the icon for a card per widget, with its badges (square or rounded) and the items behind them: problem sensors, failing PRs, containers, open issues, services. Click an item to open it in the browser. Containers, issues and services have buttons to start, stop, restart, resolve, mute or deploy.
+- **Popup:** click the icon for a card per widget, with its badges (square or rounded) and the items behind them: problem sensors, failing PRs, containers, open issues, services. Click an item to open it in the browser. Containers, issues and services have buttons to start, stop, restart, resolve, mute or deploy, and Docker Compose stacks can be started, stopped or restarted as a whole.
 - **Notifications:** when something newly goes wrong, for example a sensor goes down, CI fails, a container crashes, a new issue arrives, a deployment fails or a runner goes offline.
 - **Settings:** add, reorder and remove widgets, choose which badges show, how often each one checks, and start at login.
 
