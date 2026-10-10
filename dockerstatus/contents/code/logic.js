@@ -82,6 +82,21 @@ function groupContainers(containers, order) {
         }))
 }
 
+// Whether a container is up (so it can be stopped or restarted) rather than down (so it can be started).
+// Paused containers are neither.
+function isActive(stateKey) {
+    return stateKey === "running" || stateKey === "unhealthy" || stateKey === "restarting"
+}
+
+// Which buttons a Compose stack gets: start when any of its containers is down, stop and restart
+// when any is up.
+function stackActions(containers) {
+    return {
+        start: containers.some(c => !isActive(c.stateKey) && c.stateKey !== "paused"),
+        stop: containers.some(c => isActive(c.stateKey)),
+    }
+}
+
 // Containers that newly became failed or unhealthy since the last check, and the states to
 // remember for the next one. Nothing is fresh on the first check (previousStates null).
 function freshProblems(containers, previousStates) {

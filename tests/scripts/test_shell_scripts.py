@@ -60,8 +60,18 @@ def test_docker_action(docker, run, context, expected):
     assert docker.calls("docker")[-1]["args"] == expected
 
 
-def test_docker_action_rejects_other_commands(docker, run):
-    result = run("dockerstatus", "action.sh", "", "rm", "a1")
+@pytest.mark.parametrize("context, expected", [
+    ("", ["compose", "--project-name", "shop", "stop"]),
+    ("colima", ["--context", "colima", "compose", "--project-name", "shop", "stop"]),
+])
+def test_docker_stack_action(docker, run, context, expected):
+    assert run("dockerstatus", "action.sh", context, "stop", "--project", "shop").returncode == 0
+    assert docker.calls("docker")[-1]["args"] == expected
+
+
+@pytest.mark.parametrize("args", [("rm", "a1"), ("down", "--project", "shop")])
+def test_docker_action_rejects_other_commands(docker, run, args):
+    result = run("dockerstatus", "action.sh", "", *args)
     assert result.returncode == 2 and "Unknown action" in result.stderr
     assert docker.calls("docker") == []
 

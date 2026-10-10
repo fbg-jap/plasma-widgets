@@ -99,6 +99,15 @@ test("freshProblems: only containers that newly failed or became unhealthy", () 
     assert.deepEqual(second.fresh.map(c => c.id), ["a2", "c1"])   // c1: failed -> unhealthy is a change too
 })
 
+test("stackActions: start when any container is down, stop when any is up", () => {
+    const stack = (...keys) => L.stackActions(keys.map(stateKey => ({ stateKey })))
+    assert.deepEqual(stack("running", "unhealthy"), { start: false, stop: true })
+    assert.deepEqual(stack("stopped", "failed"), { start: true, stop: false })
+    assert.deepEqual(stack("running", "failed"), { start: true, stop: true })     // half up: both
+    assert.deepEqual(stack("restarting"), { start: false, stop: true })
+    assert.deepEqual(stack("paused"), { start: false, stop: false })            // unpause isn't offered
+})
+
 test("panelStates and visibleStates", () => {
     const states = ORDER.map(key => ({ key, inPanel: key !== "stopped" }))
     const counts = { failed: 1, stopped: 2, running: 3 }

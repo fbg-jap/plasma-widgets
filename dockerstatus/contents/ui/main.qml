@@ -22,8 +22,10 @@ PlasmoidItem {
     property var stateCounts: ({})
     // Previous state of each container by id, to notify only on changes; null until the first check.
     property var previousStates: null
-    // Ids of containers with a start/stop/restart in progress.
+    // Ids of containers, and "project:<name>" for Compose stacks, with a start/stop/restart in progress.
     property var busyIds: ({})
+    // The busyIds keys each running action.sh command holds, by its command line.
+    property var pendingActions: ({})
     property bool loaded: false
     property date lastChecked
     property string errorText: ""
@@ -68,13 +70,25 @@ PlasmoidItem {
         fetcher.connectSource("sh " + Logic.shellQuote(codeDir + "fetch.sh") + " " + Logic.shellQuote(dockerContext))
     }
 
-    function runAction(container, action) {
+    // Runs action.sh with `args` after the context, marking `keys` busy until it finishes.
+    function runAction(keys, args) {
         const busy = Object.assign({}, busyIds)
-        busy[container.id] = true
+        keys.forEach(key => busy[key] = true)
         busyIds = busy
         actionError = ""
-        actions.connectSource("sh " + Logic.shellQuote(codeDir + "action.sh") + " " + Logic.shellQuote(dockerContext)
-            + " " + action + " " + Logic.shellQuote(container.id))
+        const source = "sh " + Logic.shellQuote(codeDir + "action.sh") + " " + Logic.shellQuote(dockerContext) + " " + args
+        pendingActions[source] = keys
+        actions.connectSource(source)
+    }
+
+    function runContainerAction(container, action) {
+        runAction([container.id], action + " " + Logic.shellQuote(container.id))
+    }
+
+    // Starts, stops or restarts a whole Compose stack (a group from Logic.groupContainers).
+    function runStackAction(group, action) {
+        runAction(["project:" + group.project].concat(group.containers.map(c => c.id)),
+            action + " --project " + Logic.shellQuote(group.project))
     }
 
     function apply(stdout) {
@@ -141,9 +155,10 @@ PlasmoidItem {
 
         onNewData: (sourceName, data) => {
             disconnectSource(sourceName)
-            const id = sourceName.split(" ").pop().replace(/'/g, "")
             const busy = Object.assign({}, root.busyIds)
-            delete busy[id]
+            const keys = root.pendingActions[sourceName] || []
+            keys.forEach(key => delete busy[key])
+            delete root.pendingActions[sourceName]
             root.busyIds = busy
             if (data["exit code"] !== 0) {
                 root.actionError = data["stderr"].trim() || i18n("docker exited with code %1", data["exit code"])
@@ -374,8 +389,7 @@ PlasmoidItem {
         id: row
         property var container
         readonly property bool busy: root.busyIds[container.id] === true
-        readonly property bool active: container.stateKey === "running" || container.stateKey === "unhealthy"
-            || container.stateKey === "restarting"
+        readonly property bool active: Logic.isActive(container.stateKey)
 
         Layout.fillWidth: true
         hoverEnabled: true
@@ -428,7 +442,7 @@ PlasmoidItem {
                 icon.name: "media-playback-start"
                 display: PlasmaComponents.AbstractButton.IconOnly
                 text: i18n("Start %1", row.container.name)
-                onClicked: root.runAction(row.container, "start")
+                onClicked: root.runContainerAction(row.container, "start")
                 PlasmaComponents.ToolTip.text: text
                 PlasmaComponents.ToolTip.visible: hovered
             }
@@ -437,7 +451,7 @@ PlasmoidItem {
                 icon.name: "view-refresh"
                 display: PlasmaComponents.AbstractButton.IconOnly
                 text: i18n("Restart %1", row.container.name)
-                onClicked: root.runAction(row.container, "restart")
+                onClicked: root.runContainerAction(row.container, "restart")
                 PlasmaComponents.ToolTip.text: text
                 PlasmaComponents.ToolTip.visible: hovered
             }
@@ -446,7 +460,7 @@ PlasmoidItem {
                 icon.name: "media-playback-stop"
                 display: PlasmaComponents.AbstractButton.IconOnly
                 text: i18n("Stop %1", row.container.name)
-                onClicked: root.runAction(row.container, "stop")
+                onClicked: root.runContainerAction(row.container, "stop")
                 PlasmaComponents.ToolTip.text: text
                 PlasmaComponents.ToolTip.visible: hovered
             }
@@ -556,10 +570,50 @@ PlasmoidItem {
                         Layout.fillWidth: true
                         spacing: 0
 
+                        // Compose stacks get start/stop/restart for the whole stack, after the separator.
                         Kirigami.ListSectionHeader {
+                            id: header
+                            readonly property bool isStack: group.modelData.project !== ""
+                            readonly property bool busy: root.busyIds["project:" + group.modelData.project] === true
+                            readonly property var stackActions: Logic.stackActions(group.modelData.containers)
+
                             Layout.fillWidth: true
                             text: i18n("%1 (%2)", group.modelData.project || i18n("Standalone containers"),
                                        group.modelData.containers.length)
+
+                            PlasmaComponents.BusyIndicator {
+                                Layout.preferredWidth: Kirigami.Units.iconSizes.small
+                                Layout.preferredHeight: Kirigami.Units.iconSizes.small
+                                visible: header.busy
+                                running: visible
+                            }
+                            PlasmaComponents.ToolButton {
+                                visible: header.isStack && !header.busy && header.stackActions.start
+                                icon.name: "media-playback-start"
+                                display: PlasmaComponents.AbstractButton.IconOnly
+                                text: i18n("Start stack %1", group.modelData.project)
+                                onClicked: root.runStackAction(group.modelData, "start")
+                                PlasmaComponents.ToolTip.text: text
+                                PlasmaComponents.ToolTip.visible: hovered
+                            }
+                            PlasmaComponents.ToolButton {
+                                visible: header.isStack && !header.busy && header.stackActions.stop
+                                icon.name: "view-refresh"
+                                display: PlasmaComponents.AbstractButton.IconOnly
+                                text: i18n("Restart stack %1", group.modelData.project)
+                                onClicked: root.runStackAction(group.modelData, "restart")
+                                PlasmaComponents.ToolTip.text: text
+                                PlasmaComponents.ToolTip.visible: hovered
+                            }
+                            PlasmaComponents.ToolButton {
+                                visible: header.isStack && !header.busy && header.stackActions.stop
+                                icon.name: "media-playback-stop"
+                                display: PlasmaComponents.AbstractButton.IconOnly
+                                text: i18n("Stop stack %1", group.modelData.project)
+                                onClicked: root.runStackAction(group.modelData, "stop")
+                                PlasmaComponents.ToolTip.text: text
+                                PlasmaComponents.ToolTip.visible: hovered
+                            }
                         }
                         Repeater {
                             model: group.modelData.containers

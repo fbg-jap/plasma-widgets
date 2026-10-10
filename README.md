@@ -9,7 +9,7 @@ KDE Plasma 6 widgets for keeping an eye on GitHub, PRTG, Docker, Bugsink, Sentry
 | [GitHub Status](githubstatus) | `dk.madebypless.githubstatus` | GitHub's service health from githubstatus.com as status badges per component state, with active incidents |
 | [GitHub Account](githubaccount) | `dk.madebypless.githubaccount` | Count badges for review requests, notifications, open PRs and CI; click for the full lists. One widget per account. |
 | [PRTG Status](prtgstatus) | `dk.madebypless.prtgstatus` | PRTG-style status badges (down, warning, unusual, paused, up…), with the problem sensors in a popup |
-| [Docker Status](dockerstatus) | `dk.madebypless.dockerstatus` | Status badges for your containers (failed, unhealthy, restarting, paused, stopped, running), with start / stop / restart per container |
+| [Docker Status](dockerstatus) | `dk.madebypless.dockerstatus` | Status badges for your containers (failed, unhealthy, restarting, paused, stopped, running), with start / stop / restart per container and per Compose stack |
 | [Bugsink Status](bugsinkstatus) | `dk.madebypless.bugsinkstatus` | Status badges for your Bugsink issues (new, open, muted, resolved), with the open issues per project and resolve / mute buttons |
 | [Sentry Status](sentrystatus) | `dk.madebypless.sentrystatus` | Status badges for your Sentry issues (new, open, archived, resolved), with the unresolved issues per project and resolve / archive buttons |
 | [Dokploy Status](dokploystatus) | `dk.madebypless.dokploystatus` | Status badges for your Dokploy applications, Compose stacks and databases (failed, deploying, deployed, idle), with deploy / start / stop buttons |
@@ -47,13 +47,13 @@ The panel shows a badge per sensor state, like PRTG's own status bar. Under **Ap
 
 ### Docker Status
 
-The same badges for your Docker containers. Click for every container, grouped by Compose project, with start, stop and restart buttons:
+The same badges for your Docker containers. Click for every container, grouped by Compose project, with start, stop and restart buttons for each container and for each whole stack:
 
 <img src="screenshots/dockerstatus-panel.png" width="302" alt="Docker Status in the panel: badges for 1 failed, 1 unhealthy, 1 restarting, 1 paused, 2 stopped and 3 running containers">
 
 <img src="screenshots/dockerstatus-popup.png" width="468" alt="Docker Status popup: containers grouped by Compose project with a state dot, image, status and ports, and start, stop and restart buttons">
 
-A container counts as **failed** when it exited with an error. Exiting normally or being stopped with `docker stop` counts as **stopped**. The settings let you pick the Docker context (e.g. a Podman machine or remote host), how often to check (default every 15 seconds), which states get a badge, the badge style and colours, and whether to notify you when a container fails or becomes unhealthy.
+A container counts as **failed** when it exited with an error. Exiting normally or being stopped with `docker stop` counts as **stopped**. A stack's buttons run `docker compose --project-name <project> start`, `stop` or `restart`, so they work without the compose file on hand (including on a remote context); they start the stack's existing containers rather than recreating them like `up` would. The settings let you pick the Docker context (e.g. a Podman machine or remote host), how often to check (default every 15 seconds), which states get a badge, the badge style and colours, and whether to notify you when a container fails or becomes unhealthy.
 
 ### Bugsink Status
 
