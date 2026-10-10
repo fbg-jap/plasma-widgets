@@ -73,3 +73,8 @@ function panelStates(states, counts, showZero) {
 function visibleStates(states, counts) {
     return states.filter(st => (counts[st.key] || 0) > 0)
 }
+
+// The collapsed groups list with key added, or removed if it was there
+function toggled(list, key) {
+    return list.includes(key) ? list.filter(k => k !== key) : list.concat([key])
+}

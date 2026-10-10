@@ -88,14 +88,6 @@ PlasmoidItem {
                         + " " + Logic.shellQuote(extraCodes))
     }
 
-    function isCollapsed(key) {
-        return Plasmoid.configuration.collapsedGroups.includes(key)
-    }
-
-    function toggleCollapsed(key) {
-        Plasmoid.configuration.collapsedGroups = Logic.toggled(Array.from(Plasmoid.configuration.collapsedGroups), key)
-    }
-
     function sensorUrl(sensor) {
         return Logic.sensorUrl(serverUrl, sensor)
     }
@@ -468,6 +460,30 @@ PlasmoidItem {
         }
     }
 
+    function isCollapsed(key) {
+        return Plasmoid.configuration.collapsedGroups.includes(key)
+    }
+
+    function toggleCollapsed(key) {
+        Plasmoid.configuration.collapsedGroups = Logic.toggled(Array.from(Plasmoid.configuration.collapsedGroups), key)
+    }
+
+    // A popup section header that collapses or expands its list when clicked, remembered per
+    // groupKey. The list's Repeater shows nothing while "collapsed" is set.
+    component GroupHeader: Kirigami.ListSectionHeader {
+        id: groupHeader
+        property string groupKey
+        readonly property bool collapsed: root.isCollapsed(groupKey)
+
+        Layout.fillWidth: true
+        icon.name: collapsed ? (Qt.application.layoutDirection === Qt.RightToLeft ? "arrow-left" : "arrow-right") : "arrow-down"
+        icon.width: Kirigami.Units.iconSizes.small
+        icon.height: Kirigami.Units.iconSizes.small
+        hoverEnabled: true
+        onClicked: root.toggleCollapsed(groupKey)
+        Accessible.name: collapsed ? i18n("Expand %1", text) : i18n("Collapse %1", text)
+    }
+
     // A section header plus its sensors; hidden when the group is empty. Clicking the header
     // collapses or expands the list, remembered per state key.
     component SensorGroup: ColumnLayout {
@@ -476,25 +492,18 @@ PlasmoidItem {
         property string title
         property var sensors: []
         property color dotColor
-        readonly property bool collapsed: root.isCollapsed(key)
 
         Layout.fillWidth: true
         spacing: 0
         visible: sensors.length > 0
 
-        Kirigami.ListSectionHeader {
-            Layout.fillWidth: true
-            text: i18n("%1 (%2)", title, sensors.length)
-            icon.name: group.collapsed ? (Qt.application.layoutDirection === Qt.RightToLeft ? "arrow-left" : "arrow-right")
-                                       : "arrow-down"
-            icon.width: Kirigami.Units.iconSizes.small
-            icon.height: Kirigami.Units.iconSizes.small
-            hoverEnabled: true
-            onClicked: root.toggleCollapsed(group.key)
-            Accessible.name: group.collapsed ? i18n("Expand %1", title) : i18n("Collapse %1", title)
+        GroupHeader {
+            id: header
+            groupKey: group.key
+            text: i18n("%1 (%2)", group.title, group.sensors.length)
         }
         Repeater {
-            model: group.collapsed ? [] : sensors
+            model: header.collapsed ? [] : sensors
             SensorRow {
                 required property var modelData
                 sensor: modelData

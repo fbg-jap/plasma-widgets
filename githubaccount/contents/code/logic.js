@@ -88,3 +88,8 @@ function age(iso, now) {
     if (hours < 24) return { unit: "hour", count: hours }
     return { unit: "day", count: Math.round(hours / 24) }
 }
+
+// The collapsed groups list with key added, or removed if it was there
+function toggled(list, key) {
+    return list.includes(key) ? list.filter(k => k !== key) : list.concat([key])
+}

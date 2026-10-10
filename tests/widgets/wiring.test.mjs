@@ -23,3 +23,17 @@ for (const widget of widgets) {
         assert.doesNotMatch(withoutComments, /\b(i18n|i18np|Plasmoid|Kirigami|Qt\.)\b/)
     })
 }
+
+// Popups with grouped lists let you collapse each group (GroupHeader), saved in collapsedGroups.
+for (const widget of widgets.filter(w => w !== "runnerstatus")) {
+    test(`${widget}: popup groups are collapsible`, () => {
+        const qml = source(widget, "ui/main.qml")
+        assert.match(qml, /component GroupHeader: Kirigami\.ListSectionHeader/)
+        assert.doesNotMatch(qml.replace(/component GroupHeader: Kirigami\.ListSectionHeader/, ""), /Kirigami\.ListSectionHeader/,
+                            "every section header should be a GroupHeader")
+        assert.match(source(widget, "config/main.xml"), /<entry name="collapsedGroups" type="StringList">/)
+        const L = loadLogic(widget)
+        assert.deepEqual(L.toggled(["a"], "b"), ["a", "b"])
+        assert.deepEqual(L.toggled(["a", "b"], "a"), ["b"])
+    })
+}

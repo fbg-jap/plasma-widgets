@@ -467,6 +467,30 @@ PlasmoidItem {
         }
     }
 
+    function isCollapsed(key) {
+        return Plasmoid.configuration.collapsedGroups.includes(key)
+    }
+
+    function toggleCollapsed(key) {
+        Plasmoid.configuration.collapsedGroups = Logic.toggled(Array.from(Plasmoid.configuration.collapsedGroups), key)
+    }
+
+    // A popup section header that collapses or expands its list when clicked, remembered per
+    // groupKey. The list's Repeater shows nothing while "collapsed" is set.
+    component GroupHeader: Kirigami.ListSectionHeader {
+        id: groupHeader
+        property string groupKey
+        readonly property bool collapsed: root.isCollapsed(groupKey)
+
+        Layout.fillWidth: true
+        icon.name: collapsed ? (Qt.application.layoutDirection === Qt.RightToLeft ? "arrow-left" : "arrow-right") : "arrow-down"
+        icon.width: Kirigami.Units.iconSizes.small
+        icon.height: Kirigami.Units.iconSizes.small
+        hoverEnabled: true
+        onClicked: root.toggleCollapsed(groupKey)
+        Accessible.name: collapsed ? i18n("Expand %1", text) : i18n("Collapse %1", text)
+    }
+
     fullRepresentation: PlasmaExtras.Representation {
         Layout.minimumWidth: Kirigami.Units.gridUnit * 20
         Layout.minimumHeight: Kirigami.Units.gridUnit * 12
@@ -571,13 +595,13 @@ PlasmoidItem {
                         spacing: 0
 
                         // Compose stacks get start/stop/restart for the whole stack, after the separator.
-                        Kirigami.ListSectionHeader {
+                        GroupHeader {
                             id: header
+                            groupKey: "stack:" + group.modelData.project
                             readonly property bool isStack: group.modelData.project !== ""
                             readonly property bool busy: root.busyIds["project:" + group.modelData.project] === true
                             readonly property var stackActions: Logic.stackActions(group.modelData.containers)
 
-                            Layout.fillWidth: true
                             text: i18n("%1 (%2)", group.modelData.project || i18n("Standalone containers"),
                                        group.modelData.containers.length)
 
@@ -616,7 +640,7 @@ PlasmoidItem {
                             }
                         }
                         Repeater {
-                            model: group.modelData.containers
+                            model: header.collapsed ? [] : group.modelData.containers
                             ContainerRow {
                                 required property var modelData
                                 container: modelData

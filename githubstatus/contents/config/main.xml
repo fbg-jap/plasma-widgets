@@ -46,6 +46,10 @@
       <label>Show the total number of components after the badges</label>
       <default>false</default>
     </entry>
+    <entry name="collapsedGroups" type="StringList">
+      <label>Groups collapsed in the popup</label>
+      <default></default>
+    </entry>
   </group>
   <group name="Appearance">
     <entry name="showLogo" type="Bool">

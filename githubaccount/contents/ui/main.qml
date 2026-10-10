@@ -378,6 +378,30 @@ PlasmoidItem {
         }
     }
 
+    function isCollapsed(key) {
+        return Plasmoid.configuration.collapsedGroups.includes(key)
+    }
+
+    function toggleCollapsed(key) {
+        Plasmoid.configuration.collapsedGroups = Logic.toggled(Array.from(Plasmoid.configuration.collapsedGroups), key)
+    }
+
+    // A popup section header that collapses or expands its list when clicked, remembered per
+    // groupKey. The list's Repeater shows nothing while "collapsed" is set.
+    component GroupHeader: Kirigami.ListSectionHeader {
+        id: groupHeader
+        property string groupKey
+        readonly property bool collapsed: root.isCollapsed(groupKey)
+
+        Layout.fillWidth: true
+        icon.name: collapsed ? (Qt.application.layoutDirection === Qt.RightToLeft ? "arrow-left" : "arrow-right") : "arrow-down"
+        icon.width: Kirigami.Units.iconSizes.small
+        icon.height: Kirigami.Units.iconSizes.small
+        hoverEnabled: true
+        onClicked: root.toggleCollapsed(groupKey)
+        Accessible.name: collapsed ? i18n("Expand %1", text) : i18n("Collapse %1", text)
+    }
+
     fullRepresentation: PlasmaExtras.Representation {
         Layout.minimumWidth: Kirigami.Units.gridUnit * 18
         Layout.minimumHeight: Kirigami.Units.gridUnit * 16
@@ -482,13 +506,14 @@ PlasmoidItem {
                     text: root.errorText
                 }
 
-                Kirigami.ListSectionHeader {
-                    Layout.fillWidth: true
+                GroupHeader {
+                    id: reviewsHeader
+                    groupKey: "reviews"
                     visible: root.reviews.length > 0
                     text: i18n("Review requested (%1)", root.reviews.length)
                 }
                 Repeater {
-                    model: root.reviews
+                    model: reviewsHeader.collapsed ? [] : root.reviews
                     EntryRow {
                         required property var modelData
                         title: modelData.title
@@ -500,12 +525,13 @@ PlasmoidItem {
                     }
                 }
 
-                Kirigami.ListSectionHeader {
-                    Layout.fillWidth: true
+                GroupHeader {
+                    id: notificationsHeader
+                    groupKey: "notifications"
                     text: i18n("Notifications (%1 unread)", root.unreadNotifications.length)
                 }
                 Repeater {
-                    model: root.notifications
+                    model: notificationsHeader.collapsed ? [] : root.notifications
                     EntryRow {
                         required property var modelData
                         title: modelData.subject.title
@@ -520,19 +546,20 @@ PlasmoidItem {
                     textFormat: Text.PlainText
                     Layout.fillWidth: true
                     Layout.margins: Kirigami.Units.largeSpacing
-                    visible: root.notifications.length === 0
+                    visible: root.notifications.length === 0 && !notificationsHeader.collapsed
                     horizontalAlignment: Text.AlignHCenter
                     opacity: 0.7
                     text: i18n("You're all caught up")
                 }
 
-                Kirigami.ListSectionHeader {
-                    Layout.fillWidth: true
+                GroupHeader {
+                    id: pullRequestsHeader
+                    groupKey: "pullRequests"
                     visible: root.pullRequests.length > 0
                     text: i18n("Your open pull requests (%1)", root.pullRequests.length)
                 }
                 Repeater {
-                    model: root.pullRequests
+                    model: pullRequestsHeader.collapsed ? [] : root.pullRequests
                     EntryRow {
                         required property var modelData
                         title: (modelData.isDraft ? i18n("[Draft] ") : "") + modelData.title
@@ -542,13 +569,14 @@ PlasmoidItem {
                     }
                 }
 
-                Kirigami.ListSectionHeader {
-                    Layout.fillWidth: true
+                GroupHeader {
+                    id: reposHeader
+                    groupKey: "repos"
                     visible: Plasmoid.configuration.showRepos && root.repos.length > 0
                     text: i18n("Recently pushed repositories")
                 }
                 Repeater {
-                    model: Plasmoid.configuration.showRepos ? root.repos : []
+                    model: Plasmoid.configuration.showRepos && !reposHeader.collapsed ? root.repos : []
                     EntryRow {
                         required property var modelData
                         title: modelData.name

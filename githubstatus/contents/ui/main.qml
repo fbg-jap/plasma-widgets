@@ -358,6 +358,30 @@ PlasmoidItem {
         }
     }
 
+    function isCollapsed(key) {
+        return Plasmoid.configuration.collapsedGroups.includes(key)
+    }
+
+    function toggleCollapsed(key) {
+        Plasmoid.configuration.collapsedGroups = Logic.toggled(Array.from(Plasmoid.configuration.collapsedGroups), key)
+    }
+
+    // A popup section header that collapses or expands its list when clicked, remembered per
+    // groupKey. The list's Repeater shows nothing while "collapsed" is set.
+    component GroupHeader: Kirigami.ListSectionHeader {
+        id: groupHeader
+        property string groupKey
+        readonly property bool collapsed: root.isCollapsed(groupKey)
+
+        Layout.fillWidth: true
+        icon.name: collapsed ? (Qt.application.layoutDirection === Qt.RightToLeft ? "arrow-left" : "arrow-right") : "arrow-down"
+        icon.width: Kirigami.Units.iconSizes.small
+        icon.height: Kirigami.Units.iconSizes.small
+        hoverEnabled: true
+        onClicked: root.toggleCollapsed(groupKey)
+        Accessible.name: collapsed ? i18n("Expand %1", text) : i18n("Collapse %1", text)
+    }
+
     fullRepresentation: PlasmaExtras.Representation {
         Layout.minimumWidth: Kirigami.Units.gridUnit * 16
         Layout.minimumHeight: Kirigami.Units.gridUnit * 14
@@ -445,15 +469,16 @@ PlasmoidItem {
                 width: scroll.availableWidth
                 spacing: Kirigami.Units.smallSpacing
 
-                Kirigami.ListSectionHeader {
-                    Layout.fillWidth: true
-                    visible: incidentRepeater.count > 0
+                GroupHeader {
+                    id: incidentHeader
+                    groupKey: "incidents"
+                    visible: root.incidents.length + root.maintenances.length > 0
                     text: i18n("Active incidents")
                 }
 
                 Repeater {
                     id: incidentRepeater
-                    model: root.incidents.concat(root.maintenances)
+                    model: incidentHeader.collapsed ? [] : root.incidents.concat(root.maintenances)
 
                     PlasmaComponents.ItemDelegate {
                         required property var modelData
@@ -480,15 +505,16 @@ PlasmoidItem {
                     }
                 }
 
-                Kirigami.ListSectionHeader {
-                    Layout.fillWidth: true
-                    visible: componentRepeater.count > 0
+                GroupHeader {
+                    id: componentHeader
+                    groupKey: "components"
+                    visible: root.visibleComponents.length > 0
                     text: i18n("Components")
                 }
 
                 Repeater {
                     id: componentRepeater
-                    model: root.visibleComponents
+                    model: componentHeader.collapsed ? [] : root.visibleComponents
 
                     RowLayout {
                         required property var modelData
@@ -520,7 +546,7 @@ PlasmoidItem {
                 PlasmaExtras.PlaceholderMessage {
                     Layout.fillWidth: true
                     Layout.topMargin: Kirigami.Units.gridUnit * 2
-                    visible: incidentRepeater.count === 0 && componentRepeater.count === 0
+                    visible: !incidentHeader.visible && !componentHeader.visible
                     iconName: root.loading ? "view-refresh" : "checkmark"
                     text: root.loading ? i18n("Loading…") : i18n("All components operational")
                 }
