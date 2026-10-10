@@ -21,6 +21,8 @@ PlasmoidItem {
     property var acknowledged: []
     property var warning: []
     property var unusual: []
+    // Sensors of the extra states (unknown, paused, up) whose badge is switched on, keyed by state key.
+    property var extraSensors: ({})
     property var seenDownIds: null
     property bool loaded: false
     property date lastChecked
@@ -58,6 +60,10 @@ PlasmoidItem {
     // settings, optionally including empty ones.
     readonly property var panelStates: Logic.panelStates(sensorStates, stateCounts, Plasmoid.configuration.showZeroInPanel)
     readonly property int totalSensors: Logic.total(stateCounts)
+    // The popup also lists these states' sensors; fetch.sh fetches them by status code.
+    readonly property var extraStates: Logic.extraStates(sensorStates)
+    readonly property string extraCodes: Logic.extraCodes(sensorStates)
+    readonly property bool hasExtraSensors: extraStates.some(st => (extraSensors[st.key] || []).length > 0)
 
     // White or near-black, whichever reads better on the given background colour.
     function contrastText(background) {
@@ -78,7 +84,16 @@ PlasmoidItem {
             return
         }
         loading = true
-        executable.exec("sh " + Logic.shellQuote(scriptPath) + " " + Logic.shellQuote(serverUrl))
+        executable.exec("sh " + Logic.shellQuote(scriptPath) + " " + Logic.shellQuote(serverUrl)
+                        + " " + Logic.shellQuote(extraCodes))
+    }
+
+    function isCollapsed(key) {
+        return Plasmoid.configuration.collapsedGroups.includes(key)
+    }
+
+    function toggleCollapsed(key) {
+        Plasmoid.configuration.collapsedGroups = Logic.toggled(Array.from(Plasmoid.configuration.collapsedGroups), key)
     }
 
     function sensorUrl(sensor) {
@@ -92,6 +107,7 @@ PlasmoidItem {
         acknowledged = problems.acknowledged
         warning = problems.warning
         unusual = problems.unusual
+        extraSensors = Logic.splitExtra(data.extra.sensors)
         loaded = true
         notifyAboutNewDown()
     }
@@ -120,6 +136,8 @@ PlasmoidItem {
         errorText = ""
         refresh()
     }
+
+    onExtraCodesChanged: refresh()
 
     P5Support.DataSource {
         id: executable
@@ -450,12 +468,15 @@ PlasmoidItem {
         }
     }
 
-    // A section header plus its sensors; hidden when the group is empty.
+    // A section header plus its sensors; hidden when the group is empty. Clicking the header
+    // collapses or expands the list, remembered per state key.
     component SensorGroup: ColumnLayout {
         id: group
+        property string key
         property string title
         property var sensors: []
         property color dotColor
+        readonly property bool collapsed: root.isCollapsed(key)
 
         Layout.fillWidth: true
         spacing: 0
@@ -464,9 +485,16 @@ PlasmoidItem {
         Kirigami.ListSectionHeader {
             Layout.fillWidth: true
             text: i18n("%1 (%2)", title, sensors.length)
+            icon.name: group.collapsed ? (Qt.application.layoutDirection === Qt.RightToLeft ? "arrow-left" : "arrow-right")
+                                       : "arrow-down"
+            icon.width: Kirigami.Units.iconSizes.small
+            icon.height: Kirigami.Units.iconSizes.small
+            hoverEnabled: true
+            onClicked: root.toggleCollapsed(group.key)
+            Accessible.name: group.collapsed ? i18n("Expand %1", title) : i18n("Collapse %1", title)
         }
         Repeater {
-            model: sensors
+            model: group.collapsed ? [] : sensors
             SensorRow {
                 required property var modelData
                 sensor: modelData
@@ -566,7 +594,7 @@ PlasmoidItem {
         PlasmaExtras.PlaceholderMessage {
             anchors.centerIn: parent
             width: parent.width - Kirigami.Units.gridUnit * 2
-            visible: root.allGood && root.acknowledged.length === 0
+            visible: root.allGood && root.acknowledged.length === 0 && !root.hasExtraSensors
             iconName: "checkmark"
             text: i18n("All sensors OK")
         }
@@ -579,7 +607,7 @@ PlasmoidItem {
             // Never scroll sideways. An as-needed horizontal bar would also toggle with the vertical one,
             // which changes availableWidth: a binding loop on its "visible".
             PlasmaComponents.ScrollBar.horizontal.policy: PlasmaComponents.ScrollBar.AlwaysOff
-            visible: root.loaded && !(root.allGood && root.acknowledged.length === 0)
+            visible: root.loaded && !(root.allGood && root.acknowledged.length === 0 && !root.hasExtraSensors)
 
             ColumnLayout {
                 width: scroll.availableWidth
@@ -593,10 +621,22 @@ PlasmoidItem {
                     text: root.errorText
                 }
 
-                SensorGroup { title: i18n("Down"); sensors: root.down; dotColor: root.downColor }
-                SensorGroup { title: i18n("Warning"); sensors: root.warning; dotColor: root.warningColor }
-                SensorGroup { title: i18n("Unusual"); sensors: root.unusual; dotColor: root.unusualColor }
-                SensorGroup { title: i18n("Acknowledged"); sensors: root.acknowledged; dotColor: Kirigami.Theme.disabledTextColor }
+                SensorGroup { key: "down"; title: i18n("Down"); sensors: root.down; dotColor: root.downColor }
+                SensorGroup { key: "warning"; title: i18n("Warning"); sensors: root.warning; dotColor: root.warningColor }
+                SensorGroup { key: "unusual"; title: i18n("Unusual"); sensors: root.unusual; dotColor: root.unusualColor }
+                SensorGroup { key: "acknowledged"; title: i18n("Acknowledged"); sensors: root.acknowledged; dotColor: Kirigami.Theme.disabledTextColor }
+
+                // Unknown, paused and up sensors, for the states whose badge is switched on.
+                Repeater {
+                    model: root.extraStates
+                    SensorGroup {
+                        required property var modelData
+                        key: modelData.key
+                        title: modelData.label
+                        sensors: root.extraSensors[modelData.key] || []
+                        dotColor: modelData.color
+                    }
+                }
             }
         }
     }

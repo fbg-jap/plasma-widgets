@@ -1,8 +1,9 @@
 #!/bin/sh
-# Prints {"problems": <table>, "all": <table>} from PRTG's sensor table API:
-# full details for every sensor that is not Up or paused, and just the status of every sensor
-# (for the per-state counts).
-# Usage: fetch.sh <server-url>
+# Prints {"problems": <table>, "all": <table>, "extra": <table>} from PRTG's sensor table API:
+# full details for every sensor that is not Up or paused, just the status of every sensor
+# (for the per-state counts), and full details for the sensors in the extra status codes
+# (the other states the widget lists; an empty table when none are given).
+# Usage: fetch.sh <server-url> [<comma-separated status codes>]
 # The API key is read from the keyring. The widget's settings page saves it there,
 # or it can be stored by hand with:
 #   secret-tool store --label="PRTG API key" service plasma-prtg server <server-url>
@@ -10,6 +11,7 @@
 set -e
 
 server=$1
+extra_codes=$2
 if [ -z "$server" ]; then
     echo "No PRTG server configured" >&2
     exit 2
@@ -30,4 +32,16 @@ fetch() {
 problems=$(fetch "content=sensors&count=500&columns=objid,device,sensor,status,status_raw,message_raw,lastvalue&filter_status=4&filter_status=5&filter_status=10&filter_status=13&filter_status=14")
 all=$(fetch "content=sensors&count=50000&columns=objid,status_raw")
 
-printf '{"problems":%s,"all":%s}\n' "$problems" "$all"
+extra='{"sensors":[]}'
+if [ -n "$extra_codes" ]; then
+    filter=""
+    for code in $(echo "$extra_codes" | tr ',' ' '); do
+        case $code in
+            *[!0-9]*) echo "Invalid status code: $code" >&2; exit 2 ;;
+        esac
+        filter="$filter&filter_status=$code"
+    done
+    extra=$(fetch "content=sensors&count=500&columns=objid,device,sensor,status,status_raw,message_raw,lastvalue$filter")
+fi
+
+printf '{"problems":%s,"all":%s,"extra":%s}\n' "$problems" "$all" "$extra"

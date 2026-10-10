@@ -39,6 +39,32 @@ function splitProblems(sensors) {
              unusual: inState("unusual") }
 }
 
+// States the popup only lists when their badge is switched on (st.inPanel); the problem states
+// above are always listed.
+var extraStateKeys = ["unknown", "paused", "up"]
+
+// The extra states switched on in the settings
+function extraStates(states) {
+    return states.filter(st => extraStateKeys.includes(st.key) && st.inPanel)
+}
+
+// fetch.sh's extra status codes argument for those states, e.g. "7,8,9,11,12"
+function extraCodes(states) {
+    return extraStates(states).map(st => stateCodes[st.key].join(",")).join(",")
+}
+
+// fetch.sh's "extra" table -> sensors per extra state key
+function splitExtra(sensors) {
+    const groups = {}
+    extraStateKeys.forEach(key => groups[key] = sensors.filter(s => stateCodes[key].includes(s.status_raw)))
+    return groups
+}
+
+// The collapsed groups list with key added, or removed if it was there
+function toggled(list, key) {
+    return list.includes(key) ? list.filter(k => k !== key) : list.concat([key])
+}
+
 function sensorUrl(serverUrl, sensor) {
     return serverUrl + "/sensor.htm?id=" + sensor.objid
 }

@@ -17,11 +17,31 @@ def test_prtg_fetch(server, stubs, run):
     result = run("prtgstatus", "fetch.sh", server.url)
     assert result.returncode == 0, result.stderr
     assert json.loads(result.stdout) == {"problems": {"sensors": [{"objid": 1, "status_raw": 5}]},
-                                         "all": {"sensors": [{"objid": 1, "status_raw": 5}]}}
+                                         "all": {"sensors": [{"objid": 1, "status_raw": 5}]},
+                                         "extra": {"sensors": []}}
     problems, everything = (parse_qs(urlsplit(r["path"]).query) for r in server.requests)
     assert problems["filter_status"] == ["4", "5", "10", "13", "14"]
     assert problems["apitoken"] == everything["apitoken"] == ["k3y"]
     assert "filter_status" not in everything
+
+
+@pytest.mark.skipif(not shutil.which("curl"), reason="needs curl")
+def test_prtg_fetch_extra_states(server, stubs, run):
+    secret_tool(stubs, "plasma-prtg", server.url, "k3y")
+    server.add("GET /api/table.json", {"sensors": [{"objid": 1, "status_raw": 7}]})
+    result = run("prtgstatus", "fetch.sh", server.url, "7,8,3")
+    assert result.returncode == 0, result.stderr
+    assert json.loads(result.stdout)["extra"] == {"sensors": [{"objid": 1, "status_raw": 7}]}
+    extra = parse_qs(urlsplit(server.requests[-1]["path"]).query)
+    assert extra["filter_status"] == ["7", "8", "3"]
+    assert "message_raw" in extra["columns"][0]
+
+
+def test_prtg_rejects_bad_status_codes(stubs, run):
+    secret_tool(stubs, "plasma-prtg", "https://prtg.example.com", "k3y")
+    stubs.add("curl", 'echo \'{"sensors":[]}\'')
+    result = run("prtgstatus", "fetch.sh", "https://prtg.example.com", "7,8&x=1")
+    assert result.returncode == 2 and "Invalid status code" in result.stderr
 
 
 @pytest.mark.skipif(not shutil.which("curl"), reason="needs curl")

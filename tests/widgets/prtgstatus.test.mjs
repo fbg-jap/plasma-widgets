@@ -50,3 +50,25 @@ test("panelStates and visibleStates", () => {
     assert.deepEqual(L.panelStates(states, counts, false).map(s => s.key), ["down", "up"])
     assert.equal(L.panelStates(states, counts, true).length, 6)
 })
+
+test("extraStates and extraCodes: only switched-on unknown, paused and up", () => {
+    const on = ["down", "warning", "paused", "up"]
+    const states = Object.keys(L.stateCodes).map(key => ({ key, inPanel: on.includes(key) }))
+    assert.deepEqual(L.extraStates(states).map(s => s.key), ["paused", "up"])
+    assert.equal(L.extraCodes(states), "7,8,9,11,12,3")
+    assert.equal(L.extraCodes(states.map(st => ({ ...st, inPanel: false }))), "")
+})
+
+test("splitExtra", () => {
+    const sensors = [1, 7, 3, 12, 6, 3].map((status_raw, objid) => ({ objid, status_raw }))
+    const g = L.splitExtra(sensors)
+    assert.deepEqual(g.unknown.map(s => s.objid), [0, 4])
+    assert.deepEqual(g.paused.map(s => s.objid), [1, 3])
+    assert.deepEqual(g.up.map(s => s.objid), [2, 5])
+})
+
+test("toggled adds or removes a collapsed group", () => {
+    assert.deepEqual(L.toggled([], "up"), ["up"])
+    assert.deepEqual(L.toggled(["down", "up"], "up"), ["down"])
+    assert.deepEqual(L.toggled(["down"], "paused"), ["down", "paused"])
+})

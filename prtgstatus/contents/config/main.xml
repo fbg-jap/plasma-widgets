@@ -50,6 +50,10 @@
       <label>Show the total number of sensors after the badges</label>
       <default>false</default>
     </entry>
+    <entry name="collapsedGroups" type="StringList">
+      <label>Sensor groups collapsed in the popup, by state key</label>
+      <default></default>
+    </entry>
     <entry name="notifyOnDown" type="Bool">
       <label>Send a desktop notification when a sensor goes down</label>
       <default>true</default>

@@ -8,7 +8,7 @@ KDE Plasma 6 widgets for keeping an eye on GitHub, PRTG, Docker, Bugsink, Sentry
 |---|---|---|
 | [GitHub Status](githubstatus) | `dk.madebypless.githubstatus` | GitHub's service health from githubstatus.com as status badges per component state, with active incidents |
 | [GitHub Account](githubaccount) | `dk.madebypless.githubaccount` | Count badges for review requests, notifications, open PRs and CI; click for the full lists. One widget per account. |
-| [PRTG Status](prtgstatus) | `dk.madebypless.prtgstatus` | PRTG-style status badges (down, warning, unusual, paused, up…), with the problem sensors in a popup |
+| [PRTG Status](prtgstatus) | `dk.madebypless.prtgstatus` | PRTG-style status badges (down, warning, unusual, paused, up…), with the problem sensors (and any other switched-on states) in a popup |
 | [Docker Status](dockerstatus) | `dk.madebypless.dockerstatus` | Status badges for your containers (failed, unhealthy, restarting, paused, stopped, running), with start / stop / restart per container and per Compose stack |
 | [Bugsink Status](bugsinkstatus) | `dk.madebypless.bugsinkstatus` | Status badges for your Bugsink issues (new, open, muted, resolved), with the open issues per project and resolve / mute buttons |
 | [Sentry Status](sentrystatus) | `dk.madebypless.sentrystatus` | Status badges for your Sentry issues (new, open, archived, resolved), with the unresolved issues per project and resolve / archive buttons |
@@ -39,7 +39,7 @@ The panel shows count badges for review requests, unread notifications, open pul
 
 ### PRTG Status
 
-The panel shows a badge per sensor state, like PRTG's own status bar. Under **Appearance** in the widget's settings you can switch to a rounded style like PRTG's newer interface and change every colour. In the General settings you can pick which states get a badge (in the panel and the popup), show states with no sensors, and add the total (e.g. "(of 919)"). Click for the problem sensors:
+The panel shows a badge per sensor state, like PRTG's own status bar. Under **Appearance** in the widget's settings you can switch to a rounded style like PRTG's newer interface and change every colour. In the General settings you can pick which states get a badge (in the panel and the popup), show states with no sensors, and add the total (e.g. "(of 919)"). Click for the problem sensors, plus the unknown, paused or up sensors when their badge is switched on:
 
 <img src="screenshots/prtgstatus-panel.png" width="324" alt="PRTG Status in the panel: badges for 1 down, 1 down acknowledged, 2 warning, 1 unusual, 42 paused and 873 up">
 
